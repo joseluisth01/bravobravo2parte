@@ -1,0 +1,12 @@
+# This file was updated by Duplicator on 2025-10-01 10:54:34.
+# See the original_files_ folder for the original source_site_htaccess file.
+# BEGIN WordPress
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /bravobravo2parte/
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /bravobravo2parte/index.php [L]
+</IfModule>
+# END WordPress
