@@ -448,6 +448,7 @@ class ReservasDashboard
             <link rel="stylesheet" href="<?php echo RESERVAS_PLUGIN_URL; ?>assets/css/admin-style.css">
             <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
             <script src="<?php echo RESERVAS_PLUGIN_URL; ?>assets/js/dashboard-script.js"></script>
+            <script src="<?php echo RESERVAS_PLUGIN_URL; ?>assets/js/dashboardparte2-script.js"></script>
             <?php if ($is_conductor): ?>
                 <script src="<?php echo RESERVAS_PLUGIN_URL; ?>assets/js/conductor-dashboard-script.js"></script>
             <?php endif; ?>

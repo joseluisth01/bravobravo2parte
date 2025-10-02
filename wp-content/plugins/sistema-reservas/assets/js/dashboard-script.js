@@ -2764,7 +2764,7 @@ function renderReservationsReportWithFilters(data) {
     // ✅ TEXTO DEL FILTRO DE HORARIOS - MEJORADO
     let horariosText = '';
     const scheduleSelect = document.getElementById('schedule-filtro');
-    
+
     if (scheduleSelect && scheduleSelect.selectedOptions.length > 0) {
         const selectedSchedules = [];
         let todosMarcado = false;
@@ -3654,7 +3654,7 @@ function renderReservationDetails(reserva) {
     // ✅ VERIFICAR SI ES SUPER_ADMIN PARA MOSTRAR BOTÓN EDITAR
     const currentUser = window.reservasUser || {};
     const isSuperAdmin = currentUser.role === 'super_admin';
-    
+
     // ✅ BOTÓN EDITAR RESERVA SOLO PARA SUPER_ADMIN
     let editButton = '';
     if (isSuperAdmin && reserva.estado !== 'cancelada') {
@@ -3891,7 +3891,7 @@ function createEditReservationDataModal() {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
     // Añadir eventos
-    document.getElementById('editReservationDataForm').addEventListener('submit', function(e) {
+    document.getElementById('editReservationDataForm').addEventListener('submit', function (e) {
         e.preventDefault();
         processReservationDataEdit();
     });
@@ -3910,7 +3910,7 @@ function createEditReservationDataModal() {
  */
 function loadReservationDataForEdit(reservaId) {
     document.getElementById('edit-data-reserva-id').value = reservaId;
-    
+
     const formData = new FormData();
     formData.append('action', 'get_reservation_details');
     formData.append('reserva_id', reservaId);
@@ -3920,32 +3920,32 @@ function loadReservationDataForEdit(reservaId) {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const reserva = data.data;
-            
-            // Llenar campos de personas
-            document.getElementById('edit-adultos').value = reserva.adultos || 0;
-            document.getElementById('edit-residentes').value = reserva.residentes || 0;
-            document.getElementById('edit-ninos-5-12').value = reserva.ninos_5_12 || 0;
-            document.getElementById('edit-ninos-menores').value = reserva.ninos_menores || 0;
-            
-            // Llenar campos de precios
-            document.getElementById('edit-precio-base').value = parseFloat(reserva.precio_base || 0).toFixed(2);
-            document.getElementById('edit-descuento-total').value = parseFloat(reserva.descuento_total || 0).toFixed(2);
-            document.getElementById('edit-precio-final').value = parseFloat(reserva.precio_final || 0).toFixed(2);
-            
-            // Actualizar totales
-            updatePersonsTotal();
-        } else {
-            alert('Error cargando datos de la reserva: ' + data.data);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error de conexión');
-    });
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const reserva = data.data;
+
+                // Llenar campos de personas
+                document.getElementById('edit-adultos').value = reserva.adultos || 0;
+                document.getElementById('edit-residentes').value = reserva.residentes || 0;
+                document.getElementById('edit-ninos-5-12').value = reserva.ninos_5_12 || 0;
+                document.getElementById('edit-ninos-menores').value = reserva.ninos_menores || 0;
+
+                // Llenar campos de precios
+                document.getElementById('edit-precio-base').value = parseFloat(reserva.precio_base || 0).toFixed(2);
+                document.getElementById('edit-descuento-total').value = parseFloat(reserva.descuento_total || 0).toFixed(2);
+                document.getElementById('edit-precio-final').value = parseFloat(reserva.precio_final || 0).toFixed(2);
+
+                // Actualizar totales
+                updatePersonsTotal();
+            } else {
+                alert('Error cargando datos de la reserva: ' + data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        });
 }
 
 /**
@@ -3956,10 +3956,10 @@ function updatePersonsTotal() {
     const residentes = parseInt(document.getElementById('edit-residentes').value) || 0;
     const ninos512 = parseInt(document.getElementById('edit-ninos-5-12').value) || 0;
     const ninosMenores = parseInt(document.getElementById('edit-ninos-menores').value) || 0;
-    
+
     const total = adultos + residentes + ninos512; // Los menores no ocupan plaza
     document.getElementById('edit-total-personas').textContent = total;
-    
+
     // Validar que si hay niños, debe haber adultos
     if ((ninos512 > 0 || ninosMenores > 0) && (adultos + residentes) === 0) {
         alert('Debe haber al menos un adulto si hay niños en la reserva');
@@ -3976,7 +3976,7 @@ function updateFinalPrice() {
     const precioBase = parseFloat(document.getElementById('edit-precio-base').value) || 0;
     const descuentoTotal = parseFloat(document.getElementById('edit-descuento-total').value) || 0;
     const precioFinal = Math.max(0, precioBase - descuentoTotal);
-    
+
     document.getElementById('edit-precio-final').value = precioFinal.toFixed(2);
 }
 
@@ -3989,67 +3989,67 @@ function processReservationDataEdit() {
     const ninos512 = parseInt(document.getElementById('edit-ninos-5-12').value) || 0;
     const ninosMenores = parseInt(document.getElementById('edit-ninos-menores').value) || 0;
     const motivoCambio = document.getElementById('edit-motivo-cambio').value.trim();
-    
+
     // Validaciones
     if ((ninos512 + ninosMenores) > 0 && (adultos + residentes) === 0) {
         alert('Debe haber al menos un adulto si hay niños en la reserva');
         return;
     }
-    
+
     if (!motivoCambio) {
         alert('Es obligatorio especificar el motivo del cambio');
         return;
     }
-    
+
     if (!confirm('¿Estás seguro de que quieres modificar estos datos de la reserva?\n\nEsta acción se registrará en el historial y se enviará una nueva confirmación al cliente.')) {
         return;
     }
-    
+
     // Deshabilitar botón
     const submitBtn = document.querySelector('#editReservationDataForm button[type="submit"]');
     const originalText = submitBtn.textContent;
     submitBtn.disabled = true;
     submitBtn.textContent = '⏳ Guardando...';
-    
+
     const formData = new FormData(document.getElementById('editReservationDataForm'));
     formData.append('action', 'update_reservation_data');
     formData.append('reserva_id', document.getElementById('edit-data-reserva-id').value);
     formData.append('nonce', reservasAjax.nonce);
-    
+
     fetch(reservasAjax.ajax_url, {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        // Rehabilitar botón
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-        
-        if (data.success) {
-            alert('✅ ' + data.data);
-            closeEditReservationDataModal();
-            
-            // Recargar lista y cerrar modal de detalles
-            closeReservationDetailsModal();
-            const activeTab = document.querySelector('.tab-btn.active');
-            if (activeTab && activeTab.textContent.includes('Reservas')) {
-                loadReservationsByDateWithFilters();
-            } else if (activeTab && activeTab.textContent.includes('Buscar')) {
-                searchReservations();
+        .then(response => response.json())
+        .then(data => {
+            // Rehabilitar botón
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+
+            if (data.success) {
+                alert('✅ ' + data.data);
+                closeEditReservationDataModal();
+
+                // Recargar lista y cerrar modal de detalles
+                closeReservationDetailsModal();
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab && activeTab.textContent.includes('Reservas')) {
+                    loadReservationsByDateWithFilters();
+                } else if (activeTab && activeTab.textContent.includes('Buscar')) {
+                    searchReservations();
+                }
+            } else {
+                alert('❌ Error: ' + data.data);
             }
-        } else {
-            alert('❌ Error: ' + data.data);
-        }
-    })
-    .catch(error => {
-        // Rehabilitar botón
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
-        
-        console.error('Error:', error);
-        alert('❌ Error de conexión al actualizar la reserva');
-    });
+        })
+        .catch(error => {
+            // Rehabilitar botón
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+
+            console.error('Error:', error);
+            alert('❌ Error de conexión al actualizar la reserva');
+        });
 }
 
 /**
@@ -6009,12 +6009,12 @@ function renderAgenciesTableRows(agencies) {
 function renderCreateAgencyModal() {
     return `
         <div id="createAgencyModal" class="modal" style="display: none;">
-            <div class="modal-content">
+            <div class="modal-content modal-content-large">
                 <div class="modal-header">
                     <h3>Crear Nueva Agencia</h3>
                     <span class="close" onclick="closeCreateAgencyModal()">&times;</span>
                 </div>
-                <form id="createAgencyForm">
+                <form id="createAgencyForm" enctype="multipart/form-data">
                     
                     <!-- ✅ ESTADO AL PRINCIPIO CON DISEÑO LLAMATIVO -->
                     <div class="form-section status-section">
@@ -6057,39 +6057,134 @@ function renderCreateAgencyModal() {
                         </div>
                     </div>
                     
-                    <!-- ✅ INFORMACIÓN FISCAL MEJORADA -->
-<div class="form-section">
-    <h4>🏛️ Información Fiscal</h4>
-    <div class="form-grid">
-        <div class="form-group">
-            <label for="razon_social">Razón Social</label>
-            <input type="text" name="razon_social" placeholder="Denominación social oficial">
-        </div>
-        <div class="form-group">
-            <label for="cif">CIF/NIF</label>
-            <input type="text" name="cif" placeholder="B12345678">
-        </div>
-        <div class="form-group form-group-full">
-            <label for="domicilio_fiscal">Domicilio Fiscal</label>
-            <input type="text" name="domicilio_fiscal" placeholder="Dirección fiscal completa">
-        </div>
-        <!-- ✅ AÑADIR ESTE CAMPO: -->
-        <div class="form-group">
-            <label for="inicial_localizador">Inicial Localizador *</label>
-            <input type="text" name="inicial_localizador" id="inicial_localizador" 
-                   value="A" maxlength="5" required placeholder="Ej: A, B, MAD"
-                   style="text-transform: uppercase;">
-            <small>Letra(s) que aparecerán al inicio de los localizadores (máx. 5 caracteres)</small>
-        </div>
-        <div class="form-group">
-    <label for="horas_cancelacion_previa">Horas Previas a Cancelación</label>
-    <input type="number" name="horas_cancelacion_previa" id="horas_cancelacion_previa" 
-           value="24" min="1" max="168" required
-           style="background-color: #fff3cd; border: 2px solid #ffc107;">
-    <small style="color: #856404; font-weight: bold;">⏰ Tiempo límite (en horas) para que esta agencia pueda cancelar reservas</small>
-</div>
-    </div>
-</div>
+                    <!-- Información Fiscal -->
+                    <div class="form-section">
+                        <h4>🏛️ Información Fiscal</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="razon_social">Razón Social</label>
+                                <input type="text" name="razon_social" placeholder="Denominación social oficial">
+                            </div>
+                            <div class="form-group">
+                                <label for="cif">CIF/NIF</label>
+                                <input type="text" name="cif" placeholder="B12345678">
+                            </div>
+                            <div class="form-group form-group-full">
+                                <label for="domicilio_fiscal">Domicilio Fiscal</label>
+                                <input type="text" name="domicilio_fiscal" placeholder="Dirección fiscal completa">
+                            </div>
+                            <div class="form-group">
+                                <label for="inicial_localizador">Inicial Localizador *</label>
+                                <input type="text" name="inicial_localizador" id="inicial_localizador" 
+                                       value="A" maxlength="5" required placeholder="Ej: A, B, MAD"
+                                       style="text-transform: uppercase;">
+                                <small>Letra(s) que aparecerán al inicio de los localizadores (máx. 5 caracteres)</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="horas_cancelacion_previa">Horas Previas a Cancelación</label>
+                                <input type="number" name="horas_cancelacion_previa" id="horas_cancelacion_previa" 
+                                       value="24" min="1" max="168" required
+                                       style="background-color: #fff3cd; border: 2px solid #ffc107;">
+                                <small style="color: #856404; font-weight: bold;">⏰ Tiempo límite (en horas) para que esta agencia pueda cancelar reservas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ NUEVA SECCIÓN: SERVICIOS ADICIONALES -->
+                    <div class="form-section service-section">
+                        <h4>🎫 Servicios Adicionales de la Agencia</h4>
+                        
+                        <div class="service-toggle-container">
+                            <label class="service-toggle-label">
+                                <input type="checkbox" id="servicio_activo" name="servicio_activo" value="1">
+                                <span class="service-toggle-text">Añadir servicio de guía turística</span>
+                            </label>
+                            <p class="service-toggle-description">
+                                Activa esta opción para ofrecer servicios adicionales que se mostrarán a los clientes después de comprar su ticket de bus.
+                            </p>
+                        </div>
+
+                        <!-- Campos que se muestran cuando el servicio está activo -->
+                        <div id="service-fields-container" style="display: none;">
+                            
+                            <!-- Días disponibles -->
+                            <div class="form-group form-group-full">
+                                <label>Días Disponibles *</label>
+                                <div class="days-selector">
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="lunes">
+                                        <span>Lunes</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="martes">
+                                        <span>Martes</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="miercoles">
+                                        <span>Miércoles</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="jueves">
+                                        <span>Jueves</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="viernes">
+                                        <span>Viernes</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="sabado">
+                                        <span>Sábado</span>
+                                    </label>
+                                    <label class="day-checkbox">
+                                        <input type="checkbox" name="dias_disponibles[]" value="domingo">
+                                        <span>Domingo</span>
+                                    </label>
+                                </div>
+                                <small>Selecciona los días en los que este servicio estará disponible</small>
+                            </div>
+
+                            <!-- Precios -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="precio_adulto_servicio">Precio Adulto (€) *</label>
+                                    <input type="number" name="precio_adulto" id="precio_adulto_servicio" 
+                                           step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por adulto para este servicio</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="precio_nino_servicio">Precio Niño (€) *</label>
+                                    <input type="number" name="precio_nino" id="precio_nino_servicio" 
+                                           step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por niño para este servicio</small>
+                                </div>
+                            </div>
+
+                            <!-- Descripción -->
+                            <div class="form-group form-group-full">
+                                <label for="descripcion_servicio">Descripción del Servicio</label>
+                                <textarea name="descripcion" id="descripcion_servicio" rows="3" 
+                                          placeholder="Describe brevemente qué incluye este servicio..."></textarea>
+                                <small>Esta descripción se mostrará a los clientes junto con el servicio</small>
+                            </div>
+
+                            <!-- Imágenes -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="logo_image">Logo de la Agencia</label>
+                                    <input type="file" id="logo_image" name="logo_image" accept="image/*">
+                                    <small>Formatos: JPG, PNG, GIF. Máximo 2MB</small>
+                                    <div id="logo-preview-container"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="portada_image">Imagen de Portada</label>
+                                    <input type="file" id="portada_image" name="portada_image" accept="image/*">
+                                    <small>Formatos: JPG, PNG, GIF. Máximo 2MB</small>
+                                    <div id="portada-preview-container"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                     
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Crear Agencia</button>
@@ -6108,18 +6203,17 @@ function renderCreateAgencyModal() {
 function renderEditAgencyModal() {
     return `
         <div id="editAgencyModal" class="modal" style="display: none;">
-            <div class="modal-content">
+            <div class="modal-content modal-content-large">
                 <div class="modal-header">
                     <h3>Editar Agencia</h3>
                     <span class="close" onclick="closeEditAgencyModal()">&times;</span>
                 </div>
-                <form id="editAgencyForm">
+                <form id="editAgencyForm" enctype="multipart/form-data">
                     <input type="hidden" name="agency_id" id="edit_agency_id">
                     
                     <!-- ✅ ESTADO MOVIDO AL PRINCIPIO CON DISEÑO LLAMATIVO -->
                     <div class="form-section status-section">
                         <div class="form-group status-group">
-                            
                             <select name="status" id="edit_status" class="status-select">
                                 <option value="active">✅ Activa</option>
                                 <option value="inactive">⏸️ Inactiva</option>
@@ -6158,39 +6252,202 @@ function renderEditAgencyModal() {
                         </div>
                     </div>
 
-                    <!-- ✅ INFORMACIÓN FISCAL MEJORADA -->
-<div class="form-section">
-    <h4>🏛️ Información Fiscal</h4>
-    <div class="form-grid">
-        <div class="form-group">
-            <label for="edit_razon_social">Razón Social</label>
-            <input type="text" name="razon_social" id="edit_razon_social" placeholder="Denominación social oficial">
+                    <!-- Información Fiscal -->
+                    <div class="form-section">
+                        <h4>🏛️ Información Fiscal</h4>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="edit_razon_social">Razón Social</label>
+                                <input type="text" name="razon_social" id="edit_razon_social" placeholder="Denominación social oficial">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_cif">CIF/NIF</label>
+                                <input type="text" name="cif" id="edit_cif" placeholder="B12345678">
+                            </div>
+                            <div class="form-group form-group-full">
+                                <label for="edit_domicilio_fiscal">Domicilio Fiscal</label>
+                                <input type="text" name="domicilio_fiscal" id="edit_domicilio_fiscal" placeholder="Dirección fiscal completa">
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_inicial_localizador">Inicial Localizador *</label>
+                                <input type="text" name="inicial_localizador" id="edit_inicial_localizador" 
+                                       maxlength="5" required placeholder="Ej: A, B, MAD"
+                                       style="text-transform: uppercase;">
+                                <small>Letra(s) que aparecerán al inicio de los localizadores (máx. 5 caracteres)</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="edit_horas_cancelacion_previa">Horas Previas a Cancelación</label>
+                                <input type="number" name="horas_cancelacion_previa" id="edit_horas_cancelacion_previa" 
+                                       min="1" max="168" required
+                                       style="background-color: #fff3cd; border: 2px solid #ffc107;">
+                                <small style="color: #856404; font-weight: bold;">⏰ Tiempo límite (en horas) para que esta agencia pueda cancelar reservas</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ✅ NUEVA SECCIÓN: SERVICIOS ADICIONALES -->
+                    <div class="form-section service-section">
+                        <h4>🎫 Servicios Adicionales de la Agencia</h4>
+                        
+                        <div class="service-toggle-container">
+                            <label class="service-toggle-label">
+                                <input type="checkbox" id="edit_servicio_activo" name="servicio_activo" value="1">
+                                <span class="service-toggle-text">Añadir servicio de guía turística</span>
+                            </label>
+                            <p class="service-toggle-description">
+                                Activa esta opción para ofrecer servicios adicionales que se mostrarán a los clientes después de comprar su ticket de bus.
+                            </p>
+                        </div>
+
+                        <!-- Campos que se muestran cuando el servicio está activo -->
+                        <div id="edit-service-fields-container" style="display: none;">
+                            
+                            <!-- Días disponibles -->
+                            <!-- Días y Horarios disponibles -->
+<div class="form-group form-group-full">
+    <label>Días y Horarios Disponibles *</label>
+    <div class="days-hours-selector">
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="lunes" onchange="toggleDayHours(this, true)">
+                <span>Lunes</span>
+            </label>
+            <div class="hours-container" id="edit-hours-lunes" style="display: none;">
+                <div class="hours-list" data-day="lunes"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('lunes', true)">+ Añadir horario</button>
+            </div>
         </div>
-        <div class="form-group">
-            <label for="edit_cif">CIF/NIF</label>
-            <input type="text" name="cif" id="edit_cif" placeholder="B12345678">
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="martes" onchange="toggleDayHours(this, true)">
+                <span>Martes</span>
+            </label>
+            <div class="hours-container" id="edit-hours-martes" style="display: none;">
+                <div class="hours-list" data-day="martes"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('martes', true)">+ Añadir horario</button>
+            </div>
         </div>
-        <div class="form-group form-group-full">
-            <label for="edit_domicilio_fiscal">Domicilio Fiscal</label>
-            <input type="text" name="domicilio_fiscal" id="edit_domicilio_fiscal" placeholder="Dirección fiscal completa">
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="miercoles" onchange="toggleDayHours(this, true)">
+                <span>Miércoles</span>
+            </label>
+            <div class="hours-container" id="edit-hours-miercoles" style="display: none;">
+                <div class="hours-list" data-day="miercoles"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('miercoles', true)">+ Añadir horario</button>
+            </div>
         </div>
-        <!-- ✅ AÑADIR ESTE CAMPO: -->
-        <div class="form-group">
-            <label for="edit_inicial_localizador">Inicial Localizador *</label>
-            <input type="text" name="inicial_localizador" id="edit_inicial_localizador" 
-                   maxlength="5" required placeholder="Ej: A, B, MAD"
-                   style="text-transform: uppercase;">
-            <small>Letra(s) que aparecerán al inicio de los localizadores (máx. 5 caracteres)</small>
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="jueves" onchange="toggleDayHours(this, true)">
+                <span>Jueves</span>
+            </label>
+            <div class="hours-container" id="edit-hours-jueves" style="display: none;">
+                <div class="hours-list" data-day="jueves"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('jueves', true)">+ Añadir horario</button>
+            </div>
         </div>
-        <div class="form-group">
-    <label for="edit_horas_cancelacion_previa">Horas Previas a Cancelación</label>
-    <input type="number" name="horas_cancelacion_previa" id="edit_horas_cancelacion_previa" 
-           min="1" max="168" required
-           style="background-color: #fff3cd; border: 2px solid #ffc107;">
-    <small style="color: #856404; font-weight: bold;">⏰ Tiempo límite (en horas) para que esta agencia pueda cancelar reservas</small>
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="viernes" onchange="toggleDayHours(this, true)">
+                <span>Viernes</span>
+            </label>
+            <div class="hours-container" id="edit-hours-viernes" style="display: none;">
+                <div class="hours-list" data-day="viernes"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('viernes', true)">+ Añadir horario</button>
+            </div>
+        </div>
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="sabado" onchange="toggleDayHours(this, true)">
+                <span>Sábado</span>
+            </label>
+            <div class="hours-container" id="edit-hours-sabado" style="display: none;">
+                <div class="hours-list" data-day="sabado"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('sabado', true)">+ Añadir horario</button>
+            </div>
+        </div>
+        
+        <div class="day-hours-item">
+            <label class="day-checkbox">
+                <input type="checkbox" class="edit-day-checkbox" value="domingo" onchange="toggleDayHours(this, true)">
+                <span>Domingo</span>
+            </label>
+            <div class="hours-container" id="edit-hours-domingo" style="display: none;">
+                <div class="hours-list" data-day="domingo"></div>
+                <button type="button" class="btn-add-hour" onclick="addHourSlot('domingo', true)">+ Añadir horario</button>
+            </div>
+        </div>
+    </div>
+    <small>Selecciona los días y añade los horarios específicos para cada día</small>
 </div>
+
+                            <!-- Precios -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="edit_precio_adulto_servicio">Precio Adulto (€) *</label>
+                                    <input type="number" name="precio_adulto" id="edit_precio_adulto_servicio" 
+                                           step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por adulto para este servicio</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_precio_nino_servicio">Precio Niño (€) *</label>
+                                    <input type="number" name="precio_nino" id="edit_precio_nino_servicio" 
+                                           step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por niño para este servicio</small>
+                                </div>
+                            </div>
+
+                            <!-- Título y Descripción -->
+<div class="form-grid">
+    <div class="form-group form-group-full">
+        <label for="edit_titulo_servicio">Título del Servicio</label>
+        <input type="text" name="titulo" id="edit_titulo_servicio" 
+               placeholder="Ej: VISITA GUIADA POR MEDINA AZAHARA CON CÓRDOBA A PIE"
+               maxlength="255">
+        <small>Este título aparecerá en lugar del nombre de la agencia en la página de confirmación</small>
     </div>
 </div>
+
+<div class="form-group form-group-full">
+    <label for="edit_descripcion_servicio">Descripción del Servicio</label>
+    <textarea name="descripcion" id="edit_descripcion_servicio" rows="3" 
+              placeholder="Describe brevemente qué incluye este servicio..."></textarea>
+    <small>Esta descripción se mostrará a los clientes junto con el servicio</small>
+</div>
+
+<div class="form-grid">
+    <div class="form-group">
+        <label for="edit_orden_prioridad">Orden de Prioridad</label>
+        <input type="number" name="orden_prioridad" id="edit_orden_prioridad" 
+               value="999" min="1" max="999" required>
+        <small><strong>Importante:</strong> Prioridad 1 = aparece primero y destacado. Números mayores aparecen después</small>
+    </div>
+</div>
+
+                            <!-- Imágenes -->
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="edit_logo_image">Logo de la Agencia</label>
+                                    <input type="file" id="edit_logo_image" name="logo_image" accept="image/*">
+                                    <small>Formatos: JPG, PNG, GIF. Máximo 2MB</small>
+                                    <div id="edit-logo-preview-container"></div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="edit_portada_image">Imagen de Portada</label>
+                                    <input type="file" id="edit_portada_image" name="portada_image" accept="image/*">
+                                    <small>Formatos: JPG, PNG, GIF. Máximo 2MB</small>
+                                    <div id="edit-portada-preview-container"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
                     
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Actualizar Agencia</button>
@@ -6200,6 +6457,7 @@ function renderEditAgencyModal() {
             </div>
             
             <style>
+                /* Estilos existentes... */
                 .form-section {
                     margin-bottom: 25px;
                     padding: 20px;
@@ -6208,26 +6466,105 @@ function renderEditAgencyModal() {
                     background: #fafafa;
                 }
                 
-                /* ✅ ESTILOS ESPECIALES PARA LA SECCIÓN DE ESTADO */
                 .status-section {
                     border: 1px solid #e1e1e1;
-    border-radius: 8px;
-    background: #fafafa;
+                    border-radius: 8px;
+                    background: #fafafa;
                     color: white;
                     text-align: center;
                     margin-bottom: 30px;
                 }
+
+                .days-hours-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.day-hours-item {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 15px;
+    background: white;
+}
+
+.day-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.day-checkbox input[type="checkbox"] {
+    margin-right: 10px;
+    width: 20px;
+    height: 20px;
+}
+
+.hours-container {
+    margin-left: 30px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.hours-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.hour-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.hour-slot input[type="time"] {
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.btn-remove-hour {
+    background: #d63638;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.btn-remove-hour:hover {
+    background: #b32d36;
+}
+
+.btn-add-hour {
+    background: #0073aa;
+    color: white;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    width: 100%;
+}
+
+.btn-add-hour:hover {
+    background: #005a87;
+}
                 
                 .status-group {
                     margin: 0;
-                }
-                
-                .status-group label {
-                    color: white;
-                    font-size: 18px;
-                    font-weight: bold;
-                    margin-bottom: 15px;
-                    display: block;
                 }
                 
                 .status-select {
@@ -6251,11 +6588,6 @@ function renderEditAgencyModal() {
                     transform: translateY(-2px);
                 }
                 
-                .status-select option {
-                    padding: 10px;
-                    font-weight: 600;
-                }
-                
                 .form-section h4 {
                     margin: 0 0 15px 0;
                     color: #333;
@@ -6271,7 +6603,6 @@ function renderEditAgencyModal() {
                     gap: 15px;
                 }
                 
-                /* ✅ CLASE PARA ELEMENTOS QUE OCUPAN TODO EL ANCHO */
                 .form-group-full {
                     grid-column: 1 / -1;
                 }
@@ -6287,7 +6618,7 @@ function renderEditAgencyModal() {
                     color: #333;
                 }
                 
-                .form-group input, .form-group textarea {
+                .form-group input, .form-group textarea, .form-group select {
                     padding: 10px;
                     border: 2px solid #ddd;
                     border-radius: 6px;
@@ -6295,10 +6626,133 @@ function renderEditAgencyModal() {
                     transition: border-color 0.3s;
                 }
                 
-                .form-group input:focus, .form-group textarea:focus {
+                .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
                     outline: none;
                     border-color: #0073aa;
                     box-shadow: 0 0 5px rgba(0, 115, 170, 0.3);
+                }
+                
+                .form-group small {
+                    margin-top: 5px;
+                    color: #666;
+                    font-size: 12px;
+                }
+                
+                /* ✅ NUEVOS ESTILOS PARA LA SECCIÓN DE SERVICIOS */
+                .service-section {
+                    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                    border: 2px solid #0073aa;
+                }
+                
+                .service-toggle-container {
+                    margin-bottom: 20px;
+                    padding: 15px;
+                    background: white;
+                    border-radius: 8px;
+                    border: 1px solid #ddd;
+                }
+                
+                .service-toggle-label {
+                    display: flex;
+                    align-items: center;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #333;
+                }
+                
+                .service-toggle-label input[type="checkbox"] {
+                    width: 24px;
+                    height: 24px;
+                    margin-right: 12px;
+                    cursor: pointer;
+                }
+                
+                .service-toggle-text {
+                    color: #0073aa;
+                }
+                
+                .service-toggle-description {
+                    margin: 10px 0 0 36px;
+                    color: #666;
+                    font-size: 13px;
+                    line-height: 1.5;
+                }
+                
+                .days-selector {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 10px;
+                    margin-top: 10px;
+                }
+                
+                .day-checkbox {
+                    display: flex;
+                    align-items: center;
+                    padding: 10px;
+                    background: white;
+                    border: 2px solid #ddd;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.3s;
+                }
+                
+                .day-checkbox:hover {
+                    border-color: #0073aa;
+                    background: #f0f8ff;
+                }
+                
+                .day-checkbox input[type="checkbox"] {
+                    margin-right: 8px;
+                    width: 18px;
+                    height: 18px;
+                    cursor: pointer;
+                }
+                
+                .day-checkbox input[type="checkbox"]:checked + span {
+                    color: #0073aa;
+                    font-weight: 600;
+                }
+                
+                .day-checkbox span {
+                    font-size: 14px;
+                    color: #333;
+                }
+                
+                .image-preview {
+                    margin-top: 10px;
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .image-preview img {
+                    max-width: 200px;
+                    max-height: 150px;
+                    border-radius: 4px;
+                    border: 2px solid #ddd;
+                }
+                
+                .btn-remove-image {
+                    position: absolute;
+                    top: 5px;
+                    right: 5px;
+                    background: #d63638;
+                    color: white;
+                    border: none;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                }
+                
+                .btn-remove-image:hover {
+                    background: #b32d36;
+                }
+                
+                /* Modal más ancho para acomodar el contenido */
+                .modal-content-large {
+                    max-width: 900px;
+                    width: 90%;
                 }
                 
                 @media (max-width: 768px) {
@@ -6306,8 +6760,14 @@ function renderEditAgencyModal() {
                         grid-template-columns: 1fr;
                     }
                     
-                    .status-select {
-                        max-width: 100%;
+                    .days-selector {
+                        grid-template-columns: repeat(2, 1fr);
+                    }
+                    
+                    .modal-content-large {
+                        width: 95%;
+                        max-height: 90vh;
+                        overflow-y: auto;
                     }
                 }
             </style>
@@ -6361,20 +6821,21 @@ function editAgency(agencyId) {
                 jQuery('#edit_username').val(agency.username);
                 jQuery('#edit_password').val('');
 
-                // ✅ CAMPOS FISCALES
+                // Campos fiscales
                 jQuery('#edit_razon_social').val(agency.razon_social || '');
                 jQuery('#edit_cif').val(agency.cif || '');
                 jQuery('#edit_domicilio_fiscal').val(agency.domicilio_fiscal || '');
-
-                // ✅ AÑADIR ESTA LÍNEA:
                 jQuery('#edit_inicial_localizador').val(agency.inicial_localizador || 'A');
                 jQuery('#edit_horas_cancelacion_previa').val(agency.horas_cancelacion_previa || 24);
 
-                // ✅ ESTADO
+                // Estado
                 jQuery('#edit_status').val(agency.status);
 
                 // Mostrar modal
                 jQuery('#editAgencyModal').show();
+
+                // ✅ CARGAR DATOS DEL SERVICIO
+                loadAgencyServiceConfigForEdit(agencyId);
             } else {
                 alert('Error cargando datos de la agencia: ' + response.data);
             }
@@ -6453,26 +6914,66 @@ function refreshAgenciesList() {
 }
 
 /**
- * Manejar envío del formulario de crear agencia
+ * Manejar envío del formulario de crear agencia (ACTUALIZADO)
  */
-jQuery(document).on('submit', '#createAgencyForm', function (e) {
+jQuery(document).off('submit', '#createAgencyForm').on('submit', '#createAgencyForm', function (e) {
     e.preventDefault();
 
-    const formData = jQuery(this).serialize();
+    console.log('Enviando formulario de crear agencia...');
+
+    // Primero crear la agencia con datos básicos
+    const basicData = {
+        action: 'save_agency',
+        nonce: reservasAjax.nonce,
+        agency_name: jQuery('input[name="agency_name"]').val(),
+        contact_person: jQuery('input[name="contact_person"]').val(),
+        email: jQuery('input[name="email"]').val(),
+        phone: jQuery('input[name="phone"]').val(),
+        username: jQuery('input[name="username"]').val(),
+        password: jQuery('input[name="password"]').val(),
+        razon_social: jQuery('input[name="razon_social"]').val(),
+        cif: jQuery('input[name="cif"]').val(),
+        domicilio_fiscal: jQuery('input[name="domicilio_fiscal"]').val(),
+        inicial_localizador: jQuery('input[name="inicial_localizador"]').val(),
+        horas_cancelacion_previa: jQuery('input[name="horas_cancelacion_previa"]').val(),
+        status: jQuery('select[name="status"]').val()
+    };
 
     jQuery.ajax({
         url: reservasAjax.ajax_url,
         type: 'POST',
-        data: {
-            action: 'save_agency',
-            ...Object.fromEntries(new URLSearchParams(formData)),
-            nonce: reservasAjax.nonce
-        },
+        data: basicData,
         success: function (response) {
             if (response.success) {
-                alert(response.data);
-                closeCreateAgencyModal();
-                loadAgenciesSection(); // Recargar lista
+                // Ahora guardar el servicio si está activo
+                const servicioActivo = jQuery('#servicio_activo').is(':checked');
+
+                if (servicioActivo) {
+                    const username = jQuery('input[name="username"]').val();
+
+                    jQuery.ajax({
+                        url: reservasAjax.ajax_url,
+                        type: 'POST',
+                        data: {
+                            action: 'get_agency_id_by_username',
+                            username: username,
+                            nonce: reservasAjax.nonce
+                        },
+                        success: function (idResponse) {
+                            if (idResponse.success) {
+                                saveAgencyServiceAfterCreate(idResponse.data.agency_id);
+                            } else {
+                                alert('Agencia creada correctamente');
+                                closeCreateAgencyModal();
+                                loadAgenciesSection();
+                            }
+                        }
+                    });
+                } else {
+                    alert('Agencia creada correctamente');
+                    closeCreateAgencyModal();
+                    loadAgenciesSection();
+                }
             } else {
                 alert('Error: ' + response.data);
             }
@@ -6484,26 +6985,103 @@ jQuery(document).on('submit', '#createAgencyForm', function (e) {
 });
 
 /**
- * Manejar envío del formulario de editar agencia
+ * Guardar servicio después de crear agencia
  */
-jQuery(document).on('submit', '#editAgencyForm', function (e) {
-    e.preventDefault();
-
-    const formData = jQuery(this).serialize();
-
+function saveAgencyServiceAfterCreate(agencyId) {
+    const serviceFormData = new FormData();
+    serviceFormData.append('action', 'save_agency_service');
+    serviceFormData.append('agency_id', agencyId);
+    serviceFormData.append('nonce', reservasAjax.nonce);
+    serviceFormData.append('servicio_activo', '1');
+    
+    // ✅ NUEVO: Recopilar horarios
+    const horarios = collectHorariosData();
+    
+    Object.keys(horarios).forEach(day => {
+        horarios[day].forEach((hora, index) => {
+            serviceFormData.append(`horarios[${day}][]`, hora);
+        });
+    });
+    
+    serviceFormData.append('precio_adulto', jQuery('#precio_adulto_servicio').val());
+    serviceFormData.append('precio_nino', jQuery('#precio_nino_servicio').val());
+    serviceFormData.append('descripcion', jQuery('#descripcion_servicio').val());
+    serviceFormData.append('titulo', jQuery('#titulo_servicio').val());
+serviceFormData.append('orden_prioridad', jQuery('#orden_prioridad').val());
+    
+    // Añadir archivos
+    const logoFile = jQuery('#logo_image')[0].files[0];
+    if (logoFile) {
+        serviceFormData.append('logo_image', logoFile);
+    }
+    
+    const portadaFile = jQuery('#portada_image')[0].files[0];
+    if (portadaFile) {
+        serviceFormData.append('portada_image', portadaFile);
+    }
+    
     jQuery.ajax({
         url: reservasAjax.ajax_url,
         type: 'POST',
-        data: {
-            action: 'save_agency',
-            ...Object.fromEntries(new URLSearchParams(formData)),
-            nonce: reservasAjax.nonce
+        data: serviceFormData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                alert('Agencia y servicio creados correctamente');
+            } else {
+                alert('Agencia creada, pero hubo un error al guardar el servicio: ' + response.data);
+            }
+            closeCreateAgencyModal();
+            loadAgenciesSection();
         },
+        error: function(xhr, status, error) {
+            console.error('Error guardando servicio:', error);
+            alert('Agencia creada correctamente');
+            closeCreateAgencyModal();
+            loadAgenciesSection();
+        }
+    });
+}
+
+/**
+ * Manejar envío del formulario de editar agencia (CORREGIDO)
+ */
+jQuery(document).off('submit', '#editAgencyForm').on('submit', '#editAgencyForm', function (e) {
+    e.preventDefault();
+
+    console.log('Enviando formulario de editar agencia...');
+
+    const agencyId = jQuery('#edit_agency_id').val();
+
+    // Recopilar datos básicos
+    const basicData = {
+        action: 'save_agency',
+        nonce: reservasAjax.nonce,
+        agency_id: agencyId,
+        agency_name: jQuery('#edit_agency_name').val(),
+        contact_person: jQuery('#edit_contact_person').val(),
+        email: jQuery('#edit_email').val(),
+        phone: jQuery('#edit_phone').val(),
+        username: jQuery('#edit_username').val(),
+        password: jQuery('#edit_password').val(),
+        razon_social: jQuery('#edit_razon_social').val(),
+        cif: jQuery('#edit_cif').val(),
+        domicilio_fiscal: jQuery('#edit_domicilio_fiscal').val(),
+        inicial_localizador: jQuery('#edit_inicial_localizador').val(),
+        horas_cancelacion_previa: jQuery('#edit_horas_cancelacion_previa').val(),
+        status: jQuery('#edit_status').val()
+    };
+
+    // Primero guardar datos básicos de la agencia
+    jQuery.ajax({
+        url: reservasAjax.ajax_url,
+        type: 'POST',
+        data: basicData,
         success: function (response) {
             if (response.success) {
-                alert(response.data);
-                closeEditAgencyModal();
-                loadAgenciesSection(); // Recargar lista
+                // Ahora guardar el servicio
+                saveAgencyServiceOnEdit(agencyId);
             } else {
                 alert('Error: ' + response.data);
             }
@@ -6513,6 +7091,85 @@ jQuery(document).on('submit', '#editAgencyForm', function (e) {
         }
     });
 });
+
+
+/**
+ * Guardar servicio al editar agencia (SIN CAMBIOS - ya estaba bien)
+ */
+function saveAgencyServiceOnEdit(agencyId) {
+    const servicioActivo = jQuery('#edit_servicio_activo').is(':checked');
+    
+    const serviceFormData = new FormData();
+    serviceFormData.append('action', 'save_agency_service');
+    serviceFormData.append('agency_id', agencyId);
+    serviceFormData.append('nonce', reservasAjax.nonce);
+    
+    if (servicioActivo) {
+        serviceFormData.append('servicio_activo', '1');
+        
+        // ✅ NUEVO: Recopilar horarios usando la función auxiliar
+        const horarios = collectHorariosData();
+        
+        if (Object.keys(horarios).length === 0) {
+            alert('Error: Debes seleccionar al menos un día con horarios');
+            return;
+        }
+        
+        Object.keys(horarios).forEach(day => {
+            horarios[day].forEach((hora, index) => {
+                serviceFormData.append(`horarios[${day}][]`, hora);
+            });
+        });
+        
+        // Precios
+        const precioAdulto = parseFloat(jQuery('#edit_precio_adulto_servicio').val());
+        if (!precioAdulto || precioAdulto <= 0) {
+            alert('Error: El precio de adulto debe ser mayor a 0');
+            return;
+        }
+        
+        serviceFormData.append('precio_adulto', precioAdulto);
+        serviceFormData.append('precio_nino', jQuery('#edit_precio_nino_servicio').val());
+        serviceFormData.append('descripcion', jQuery('#edit_descripcion_servicio').val());
+        serviceFormData.append('titulo', jQuery('#edit_titulo_servicio').val());
+serviceFormData.append('orden_prioridad', jQuery('#edit_orden_prioridad').val());
+        
+        // Archivos
+        const logoFile = jQuery('#edit_logo_image')[0].files[0];
+        if (logoFile) {
+            serviceFormData.append('logo_image', logoFile);
+        }
+        
+        const portadaFile = jQuery('#edit_portada_image')[0].files[0];
+        if (portadaFile) {
+            serviceFormData.append('portada_image', portadaFile);
+        }
+    }
+    
+    jQuery.ajax({
+        url: reservasAjax.ajax_url,
+        type: 'POST',
+        data: serviceFormData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+            if (response.success) {
+                alert('Agencia y servicio actualizados correctamente');
+            } else {
+                alert('Agencia actualizada, pero hubo un error con el servicio: ' + response.data);
+            }
+            closeEditAgencyModal();
+            loadAgenciesSection();
+        },
+        error: function(xhr, status, error) {
+            console.error('Error guardando servicio:', error);
+            alert('Error de conexión al guardar servicio');
+            closeEditAgencyModal();
+            loadAgenciesSection();
+        }
+    });
+}
+
 
 // Funciones auxiliares
 function escapeHtml(text) {
@@ -9541,35 +10198,35 @@ function agencyConfirmReservation() {
     })
         .then(response => response.json())
         .then(data => {
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = originalText;
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = originalText;
 
-        if (data && data.success) {
-            console.log('Reserva de agencia procesada exitosamente:', data.data);
+            if (data && data.success) {
+                console.log('Reserva de agencia procesada exitosamente:', data.data);
 
-            const detalles = data.data.detalles;
-            const emailInfo = formData.get('email') ?
-                "\n📧 El cliente recibirá la confirmación por email." :
-                "\nℹ️ No se envió email al cliente (email no proporcionado).";
+                const detalles = data.data.detalles;
+                const emailInfo = formData.get('email') ?
+                    "\n📧 El cliente recibirá la confirmación por email." :
+                    "\nℹ️ No se envió email al cliente (email no proporcionado).";
 
-            // ✅ MENSAJE SIN PRECIO
-            const mensaje = "🎉 ¡RESERVA CREADA EXITOSAMENTE! 🎉\n\n" +
-                "📋 LOCALIZADOR: " + data.data.localizador + "\n\n" +
-                "📅 DETALLES:\n" +
-                "• Fecha: " + detalles.fecha + "\n" +
-                "• Hora: " + detalles.hora + "\n" +
-                "• Personas: " + detalles.personas + "\n\n" +
-                "✅ La reserva ha sido procesada correctamente." + emailInfo + "\n" +
-                "📧 Tu agencia y el administrador han sido notificados.\n\n" +
-                "¡Reserva de agencia completada!";
+                // ✅ MENSAJE SIN PRECIO
+                const mensaje = "🎉 ¡RESERVA CREADA EXITOSAMENTE! 🎉\n\n" +
+                    "📋 LOCALIZADOR: " + data.data.localizador + "\n\n" +
+                    "📅 DETALLES:\n" +
+                    "• Fecha: " + detalles.fecha + "\n" +
+                    "• Hora: " + detalles.hora + "\n" +
+                    "• Personas: " + detalles.personas + "\n\n" +
+                    "✅ La reserva ha sido procesada correctamente." + emailInfo + "\n" +
+                    "📧 Tu agencia y el administrador han sido notificados.\n\n" +
+                    "¡Reserva de agencia completada!";
 
-            alert(mensaje);
+                alert(mensaje);
 
-            setTimeout(() => {
-                goBackToDashboard();
-            }, 2000);
+                setTimeout(() => {
+                    goBackToDashboard();
+                }, 2000);
 
-        }else {
+            } else {
                 console.error('Error procesando reserva de agencia:', data);
                 const errorMsg = data && data.data ? data.data : 'Error desconocido';
                 alert('❌ Error procesando la reserva: ' + errorMsg);
@@ -9682,8 +10339,8 @@ function loadAgencyPrices() {
     if (service) {
         // ✅ MOSTRAR INFORMACIÓN SOBRE PRECIOS SIN DESCUENTO
         let priceInfo = document.getElementById('agency-price-info');
-        
-        
+
+
         // Solo calcular el precio total
         calculateAgencyTotalPrice();
     }
@@ -9773,14 +10430,14 @@ function updateAgencyPricingDisplay(result) {
         infoMessage.innerHTML = `
             <strong>ℹ️ Reserva de Agencia:</strong> La tarificación se gestiona según acuerdo comercial.
         `;
-        
+
         // Insertar antes del total (que no se mostrará)
         const step2 = document.getElementById('agency-step-2');
         if (step2) {
             step2.appendChild(infoMessage);
         }
     }
-    
+
     // ✅ NO MOSTRAR PRECIO TOTAL
     const totalPriceElement = document.getElementById('agency-total-price');
     if (totalPriceElement) {
@@ -12305,12 +12962,12 @@ function loadRetroAgencies() {
                 data.data.forEach(agency => {
                     const option = document.createElement('option');
                     option.value = agency.id;
-                    
+
                     let displayName = agency.agency_name;
                     if (agency.inicial_localizador && agency.inicial_localizador !== 'A') {
                         displayName += ` (${agency.inicial_localizador})`;
                     }
-                    
+
                     if (agency.status !== 'active') {
                         displayName += ` [INACTIVA]`;
                         option.style.color = '#dc3545';
@@ -12880,8 +13537,8 @@ function fillRetroConfirmationData() {
     // ✅ OBTENER AGENCIA SELECCIONADA CON VALIDACIÓN
     const agencySelect = document.getElementById('retro-agency-select');
     const selectedAgencyId = agencySelect && agencySelect.value ? agencySelect.value : '';
-    const selectedAgencyText = agencySelect && selectedAgencyId && agencySelect.selectedIndex >= 0 ? 
-        agencySelect.options[agencySelect.selectedIndex].text : 
+    const selectedAgencyText = agencySelect && selectedAgencyId && agencySelect.selectedIndex >= 0 ?
+        agencySelect.options[agencySelect.selectedIndex].text :
         'Reserva directa (sin agencia)';
 
     // Formatear fecha
@@ -12925,7 +13582,7 @@ function fillRetroConfirmationData() {
     // ✅ MANEJAR FILA DE AGENCIA CON VALIDACIÓN
     const agencyRow = document.getElementById('retro-confirm-agency-row');
     const agencySpan = document.getElementById('retro-confirm-agency');
-    
+
     if (selectedAgencyId && agencyRow && agencySpan) {
         agencySpan.textContent = selectedAgencyText;
         agencyRow.style.display = 'flex';
@@ -12970,9 +13627,9 @@ function retroConfirmReservation() {
 
     const totalPriceElement = document.getElementById('retro-total-price');
     const totalPrice = totalPriceElement ? parseFloat(totalPriceElement.textContent.replace('€', '').trim()) : 0;
-    
+
     const discountElement = document.getElementById('retro-total-discount');
-    const descuentoTotal = discountElement && discountElement.textContent ? 
+    const descuentoTotal = discountElement && discountElement.textContent ?
         parseFloat(discountElement.textContent.replace('€', '').replace('-', '').trim()) : 0;
 
     // ✅ OBTENER AGENCIA SELECCIONADA
@@ -13018,7 +13675,7 @@ function retroConfirmReservation() {
     console.log('=== DATOS AJAX A ENVIAR ===');
     console.log('JSON string length:', ajaxData.reservation_data.length);
     console.log('JSON string:', ajaxData.reservation_data);
-    
+
     // ✅ VERIFICAR QUE EL JSON ES VÁLIDO ANTES DE ENVIAR
     try {
         JSON.parse(ajaxData.reservation_data);
@@ -13045,13 +13702,13 @@ function retroConfirmReservation() {
         .then(data => {
             console.log('=== RESPUESTA DEL SERVIDOR ===');
             console.log(data);
-            
+
             confirmBtn.disabled = false;
             confirmBtn.textContent = originalText;
 
             if (data && data.success) {
                 const detalles = data.data.detalles;
-                
+
                 // ✅ MENSAJE CON INFO DE AGENCIA SI APLICA
                 let agencyInfo = '';
                 if (selectedAgencyId) {

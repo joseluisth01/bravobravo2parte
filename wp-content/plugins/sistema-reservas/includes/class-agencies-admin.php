@@ -31,6 +31,10 @@ class ReservasAgenciesAdmin
         // Hook para crear tabla
         add_action('init', array($this, 'maybe_create_table'));
         add_action('init', array($this, 'maybe_update_existing_tables'));
+
+        add_action('wp_ajax_get_agency_id_by_username', array($this, 'get_agency_id_by_username'));
+add_action('wp_ajax_nopriv_get_agency_id_by_username', array($this, 'get_agency_id_by_username'));
+
     }
 
     /**
@@ -151,6 +155,37 @@ class ReservasAgenciesAdmin
 
         wp_send_json_success($agencies);
     }
+
+
+public function get_agency_id_by_username()
+{
+    if (!session_id()) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['reservas_user']) || $_SESSION['reservas_user']['role'] !== 'super_admin') {
+        wp_send_json_error('Sin permisos');
+        return;
+    }
+
+    $username = sanitize_text_field($_POST['username']);
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'reservas_agencies';
+
+    $agency = $wpdb->get_row($wpdb->prepare(
+        "SELECT id FROM $table_name WHERE username = %s",
+        $username
+    ));
+
+    if ($agency) {
+        wp_send_json_success(array('agency_id' => $agency->id));
+    } else {
+        wp_send_json_error('Agencia no encontrada');
+    }
+}
+
+
     public function maybe_update_existing_tables()
     {
         global $wpdb;

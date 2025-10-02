@@ -30,10 +30,9 @@ class SistemaReservas
         add_action('init', array($this, 'init'));
         add_action('wp_ajax_test_pdf_generation', array($this, 'test_pdf_generation'));
         add_action('wp_ajax_nopriv_test_pdf_generation', array($this, 'test_pdf_generation'));
-
     }
 
-    
+
 
     public function test_pdf_generation()
     {
@@ -150,6 +149,7 @@ class SistemaReservas
             'includes/class-reserva-rapida-admin.php',
             'includes/class-redsys-handler.php',
             'includes/class-conductor-admin.php',
+            'includes/class-agency-services-admin.php',
         );
 
         foreach ($files as $file) {
@@ -176,6 +176,10 @@ class SistemaReservas
 
         if (class_exists('ReservasCalendarAdmin')) {
             $this->calendar_admin = new ReservasCalendarAdmin();
+        }
+
+        if (class_exists('ReservasAgencyServicesAdmin')) {
+            new ReservasAgencyServicesAdmin();
         }
 
         // Inicializar clase de descuentos
@@ -232,12 +236,13 @@ class SistemaReservas
         }
     }
 
-    public function add_rewrite_rules() {
-    add_rewrite_rule('^reservas-login/?$', 'index.php?reservas_page=login', 'top');
-    add_rewrite_rule('^reservas-admin/?$', 'index.php?reservas_page=dashboard', 'top');
-    add_rewrite_rule('^reservas-admin/([^/]+)/?$', 'index.php?reservas_page=dashboard&reservas_section=$matches[1]', 'top');
-    add_rewrite_rule('^reservas-change-password/?$', 'index.php?reservas_page=change_password', 'top'); // ✅ NUEVA LÍNEA
-}
+    public function add_rewrite_rules()
+    {
+        add_rewrite_rule('^reservas-login/?$', 'index.php?reservas_page=login', 'top');
+        add_rewrite_rule('^reservas-admin/?$', 'index.php?reservas_page=dashboard', 'top');
+        add_rewrite_rule('^reservas-admin/([^/]+)/?$', 'index.php?reservas_page=dashboard&reservas_section=$matches[1]', 'top');
+        add_rewrite_rule('^reservas-change-password/?$', 'index.php?reservas_page=change_password', 'top'); // ✅ NUEVA LÍNEA
+    }
 
     public function add_query_vars($vars)
     {
@@ -246,43 +251,47 @@ class SistemaReservas
         return $vars;
     }
 
-public function template_redirect() {
-    $page = get_query_var('reservas_page');
+    public function template_redirect()
+    {
+        $page = get_query_var('reservas_page');
 
-    // Manejar logout
-    if (isset($_GET['logout']) && $_GET['logout'] == '1') {
-        if ($this->dashboard) {
-            $this->dashboard->handle_logout();
+        // Manejar logout
+        if (isset($_GET['logout']) && $_GET['logout'] == '1') {
+            if ($this->dashboard) {
+                $this->dashboard->handle_logout();
+            }
+        }
+
+        if ($page === 'login') {
+            if ($this->dashboard) {
+                $this->dashboard->show_login();
+            }
+            exit;
+        }
+
+        if ($page === 'dashboard') {
+            if ($this->dashboard) {
+                $this->dashboard->show_dashboard();
+            }
+            exit;
+        }
+
+        // ✅ NUEVO: Manejar página de cambio de contraseña
+        if ($page === 'change_password') {
+            if ($this->dashboard) {
+                $this->dashboard->handle_change_password();
+            }
+            exit;
         }
     }
-
-    if ($page === 'login') {
-        if ($this->dashboard) {
-            $this->dashboard->show_login();
-        }
-        exit;
-    }
-
-    if ($page === 'dashboard') {
-        if ($this->dashboard) {
-            $this->dashboard->show_dashboard();
-        }
-        exit;
-    }
-
-    // ✅ NUEVO: Manejar página de cambio de contraseña
-    if ($page === 'change_password') {
-        if ($this->dashboard) {
-            $this->dashboard->handle_change_password();
-        }
-        exit;
-    }
-}
 
     public function activate()
     {
         // Crear tablas de base de datos
         $this->create_tables();
+
+        // ✅ AÑADIR ESTA LÍNEA - Crear tabla de servicios de agencias
+        $this->create_agency_services_table();
 
         // ✅ FORZAR ACTUALIZACIÓN DE TABLAS EXISTENTES
         $this->maybe_update_existing_tables();
@@ -302,56 +311,94 @@ public function template_redirect() {
         }
 
         if (!wp_next_scheduled('reservas_reset_localizadores')) {
-            $next_year = mktime(0, 0, 0, 1, 1, date('Y') + 1); // 1 de enero del próximo año
+            $next_year = mktime(0, 0, 0, 1, 1, date('Y') + 1);
             wp_schedule_event($next_year, 'yearly', 'reservas_reset_localizadores');
             error_log('✅ Programado reinicio anual de localizadores para: ' . date('Y-m-d H:i:s', $next_year));
         }
     }
 
-    private function create_conductor_user()
-{
-    global $wpdb;
-    $table_users = $wpdb->prefix . 'reservas_users';
-    
-    // Verificar si ya existe
-    $existing = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM $table_users WHERE username = %s",
-        'conductor'
-    ));
-    
-    if ($existing == 0) {
-        $result = $wpdb->insert(
-            $table_users,
-            array(
-                'username' => 'conductor',
-                'email' => 'conductor@' . parse_url(home_url(), PHP_URL_HOST),
-                'password' => password_hash('conductor', PASSWORD_DEFAULT), // ✅ CONTRASEÑA SIMPLIFICADA
-                'role' => 'conductor',
-                'status' => 'active',
-                'created_at' => current_time('mysql')
-            )
-        );
-        
-        if ($result) {
-            error_log('✅ Usuario conductor creado: conductor / conductor');
+    // ✅ AÑADIR ESTE NUEVO MÉTODO
+    private function create_agency_services_table()
+    {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'reservas_agency_services';
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        agency_id mediumint(9) NOT NULL,
+        servicio_activo tinyint(1) DEFAULT 0,
+        dias_disponibles varchar(100) DEFAULT NULL,
+        precio_adulto decimal(10,2) DEFAULT 0.00,
+        precio_nino decimal(10,2) DEFAULT 0.00,
+        logo_url varchar(255) DEFAULT NULL,
+        portada_url varchar(255) DEFAULT NULL,
+        descripcion text DEFAULT NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        UNIQUE KEY agency_id (agency_id),
+        KEY servicio_activo (servicio_activo)
+    ) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql);
+
+        // Verificar que se creó
+        $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_name'") == $table_name;
+        if ($table_exists) {
+            error_log('✅ Tabla de servicios de agencias creada correctamente en activación');
         } else {
-            error_log('❌ Error creando conductor: ' . $wpdb->last_error);
-        }
-    } else {
-        // Actualizar contraseña si ya existe
-        $result = $wpdb->update(
-            $table_users,
-            array('password' => password_hash('conductor', PASSWORD_DEFAULT)), // ✅ CONTRASEÑA SIMPLIFICADA
-            array('username' => 'conductor', 'role' => 'conductor')
-        );
-        
-        if ($result !== false) {
-            error_log('✅ Contraseña de conductor actualizada: conductor / conductor');
-        } else {
-            error_log('❌ Error actualizando contraseña conductor: ' . $wpdb->last_error);
+            error_log('❌ ERROR: No se pudo crear la tabla de servicios de agencias');
+            error_log('SQL: ' . $sql);
+            error_log('wpdb error: ' . $wpdb->last_error);
         }
     }
-}
+
+    private function create_conductor_user()
+    {
+        global $wpdb;
+        $table_users = $wpdb->prefix . 'reservas_users';
+
+        // Verificar si ya existe
+        $existing = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table_users WHERE username = %s",
+            'conductor'
+        ));
+
+        if ($existing == 0) {
+            $result = $wpdb->insert(
+                $table_users,
+                array(
+                    'username' => 'conductor',
+                    'email' => 'conductor@' . parse_url(home_url(), PHP_URL_HOST),
+                    'password' => password_hash('conductor', PASSWORD_DEFAULT), // ✅ CONTRASEÑA SIMPLIFICADA
+                    'role' => 'conductor',
+                    'status' => 'active',
+                    'created_at' => current_time('mysql')
+                )
+            );
+
+            if ($result) {
+                error_log('✅ Usuario conductor creado: conductor / conductor');
+            } else {
+                error_log('❌ Error creando conductor: ' . $wpdb->last_error);
+            }
+        } else {
+            // Actualizar contraseña si ya existe
+            $result = $wpdb->update(
+                $table_users,
+                array('password' => password_hash('conductor', PASSWORD_DEFAULT)), // ✅ CONTRASEÑA SIMPLIFICADA
+                array('username' => 'conductor', 'role' => 'conductor')
+            );
+
+            if ($result !== false) {
+                error_log('✅ Contraseña de conductor actualizada: conductor / conductor');
+            } else {
+                error_log('❌ Error actualizando contraseña conductor: ' . $wpdb->last_error);
+            }
+        }
+    }
 
     public function deactivate()
     {
@@ -919,6 +966,194 @@ function confirmacion_reserva_shortcode()
             border-radius: 20px;
         }
 
+        .additional-services-section {
+
+            padding: 50px;
+            text-align: center;
+            border-radius: 20px;
+            box-shadow: 0px 0px 15px 0px rgba(46, 45, 44, .2);
+            backdrop-filter: blur(3px);
+        }
+
+        .service-card-destacado {
+    max-width: 100%;
+}
+
+.service-card-destacado .service-name {
+    font-size: 32px !important;
+    margin-bottom: 20px;
+}
+
+.service-card-destacado .service-description {
+    font-size: 18px !important;
+    margin-bottom: 30px;
+}
+
+.service-card-destacado .horarios-boton2 {
+    padding: 18px 250px;
+    font-size: 20px;
+}
+
+@media (max-width: 768px) {
+    .service-card-destacado .horarios-boton2 {
+        padding: 15px 50px;
+        font-size: 16px;
+    }
+    
+    .service-card-destacado .service-name {
+        font-size: 24px !important;
+    }
+}
+
+        .services-title {
+            text-align: center;
+            color: #8B4513;
+            font-size: 32px;
+            font-weight: bold;
+            margin: 0 0 20px 0;
+            font-family: 'Georgia', serif;
+        }
+
+        .services-subtitle {
+            text-align: center;
+            color: #2D2D2D;
+            font-size: 16px;
+            margin: 0 0 10px 0;
+            line-height: 1.6;
+        }
+
+        .services-description {
+            text-align: center;
+            color: #2D2D2D;
+            font-size: 15px;
+            margin: 0 0 40px 0;
+            line-height: 1.6;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .service-image {
+            width: 100%;
+            height: 250px;
+            overflow: hidden;
+            padding: 20px;
+
+        }
+
+        .service-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .service-content {
+            text-align: center;
+            padding: 20px;
+
+        }
+
+        .service-name {
+            color: #871727;
+            font-size: 25px;
+            margin-bottom: 15px;
+            line-height: 1.3;
+            font-family: 'Duran-Medium';
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .service-description {
+            color: #666;
+            font-size: 16px;
+            margin: 0 0 20px 0;
+            line-height: 1.5;
+            text-transform: uppercase;
+        }
+
+        .horarios-boton2 {
+            background-color: #efcf4b;
+            color: #2e2d2c;
+            padding: 15px 200px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-family: "Duran-Medium";
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 2px;
+            transition: all .3s ease;
+            display: inline-block;
+            box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, .8);
+            border: 0px !important;
+        }
+
+        .horarios-boton2:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+            background-color: #efcf4b;
+        }
+
+        .service-button {
+            background: #EFCF4B;
+            color: #2E2D2C;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .service-button:hover {
+            background: #E5C13F;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(239, 207, 75, 0.4);
+        }
+
+        @media (max-width: 768px) {
+
+
+            .services-title {
+                font-size: 24px;
+            }
+
+            .services-subtitle,
+            .services-description {
+                font-size: 14px;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .service-image {
+                height: 200px;
+            }
+        }
+
         .success-banner {
             background: #DB7461;
             color: white;
@@ -930,6 +1165,7 @@ function confirmacion_reserva_shortcode()
             letter-spacing: 2px;
             border-top-left-radius: 20px;
             border-top-right-radius: 20px;
+            box-shadow: 0px 0px 15px 0px rgba(46, 45, 44, .2);
         }
 
         .success-banner h1 {
@@ -952,6 +1188,7 @@ function confirmacion_reserva_shortcode()
             text-align: center;
             border-bottom-left-radius: 20px;
             border-bottom-right-radius: 20px;
+            box-shadow: 0px 0px 15px 0px rgba(46, 45, 44, .2);
         }
 
         .thank-you-message {
@@ -984,7 +1221,7 @@ function confirmacion_reserva_shortcode()
             display: flex;
             gap: 15px;
             align-items: center;
-            margin: 40px 0;
+            margin-top: 30px;
             justify-content: space-between;
         }
 
@@ -1011,7 +1248,16 @@ function confirmacion_reserva_shortcode()
             border-radius: 10px;
             letter-spacing: 1px;
             margin: 0 auto;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, .8);
+
+
+
+        }
+
+        .complete-btn:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+            background-color: #efcf4b;
         }
 
         .back-btn {
@@ -1126,69 +1372,207 @@ function confirmacion_reserva_shortcode()
             window.location.href = '<?php echo home_url('/'); ?>';
         }
 
-        function loadReservationData() {
-    console.log('=== INTENTANDO CARGAR DATOS DE RESERVA ===');
-    
-    // ✅ OBTENER PARÁMETROS DE LA URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const localizador = urlParams.get('localizador');
-    const order_id = urlParams.get('order');
-    
-    console.log('Localizador desde URL:', localizador);
-    console.log('Order ID desde URL:', order_id);
-    
-    // ✅ BUSCAR POR LOCALIZADOR O POR ORDER_ID
-    if (!localizador && !order_id) {
-        console.error('❌ No se encontró localizador ni order_id en la URL');
-        showErrorInfo();
-        enableActionButtons();
+        // Dentro del <script> del shortcode, después de loadReservationData()
+        function loadAvailableServices() {
+            if (!reservationData || !reservationData.detalles) {
+                console.log('No hay datos de reserva para cargar servicios');
+                return;
+            }
+
+            console.log('=== CARGANDO SERVICIOS DISPONIBLES ===');
+            console.log('Fecha:', reservationData.detalles.fecha);
+            console.log('Hora:', reservationData.detalles.hora);
+
+            fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'get_available_services_for_confirmation',
+                        fecha: reservationData.detalles.fecha,
+                        hora: reservationData.detalles.hora
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Servicios disponibles:', data);
+
+                    if (data.success && data.data && data.data.length > 0) {
+                        renderAvailableServices(data.data);
+                    } else {
+                        console.log('No hay servicios disponibles para esta fecha/hora');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error cargando servicios:', error);
+                });
+        }
+
+        function renderAvailableServices(services) {
+    if (!services || services.length === 0) {
+        console.log('No hay servicios para mostrar');
         return;
     }
     
-    // ✅ PREPARAR DATOS PARA LA BÚSQUEDA
-    const searchData = {
-        action: 'get_confirmed_reservation_data',
-        nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
-    };
+    // Separar servicio destacado (prioridad 1) del resto
+    const destacado = services.find(s => parseInt(s.orden_prioridad) === 1);
+    const otros = services.filter(s => parseInt(s.orden_prioridad) !== 1);
     
-    // Añadir el parámetro disponible
-    if (localizador) {
-        searchData.localizador = localizador;
-        console.log('🔍 Buscando por localizador:', localizador);
-    } else if (order_id) {
-        searchData.order_id = order_id;
-        console.log('🔍 Buscando por order_id:', order_id);
+    let servicesHtml = `
+        <div class="additional-services-section container">
+            <h2 class="horarios-titulo">¡Haz qué tu Visita Cobre Vida!</h2>
+            <p class="services-subtitle">
+                Completa la experiencia con un <strong>tour guiado por expertos</strong> y descubre cada secreto de Medina Azahara.
+            </p>
+            <p class="services-description">
+                Elige la opción que más se adapte a ti entre nuestras empresas colaboradoras... 
+                <strong>¡Y disfruta de una experiencia 100 % inmersiva!</strong>
+            </p>
+    `;
+    
+    // Si hay servicio destacado (prioridad 1) - GRANDE ARRIBA
+    if (destacado) {
+        servicesHtml += `
+            <div class="service-card service-card-destacado" style="grid-column: 1 / -1; margin-bottom: 30px;">
+                ${destacado.portada_url ? `
+                    <div class="service-image" style="height: 350px;">
+                        <img src="${destacado.portada_url}" alt="${destacado.titulo || destacado.agency_name}">
+                    </div>
+                ` : ''}
+                
+                <div class="service-content" style="padding: 40px;">
+                    <h3 class="service-name">${(destacado.titulo || destacado.agency_name).toUpperCase()}</h3>
+                    
+                    <p class="service-description">
+                        ${destacado.descripcion || 'DURACIÓN 3 HORAS APROX.'}
+                    </p>
+                    
+                    <button class="horarios-boton2" onclick="contactService('${destacado.email}', '${destacado.phone}', '${destacado.agency_name}')">
+                        DESDE ${parseFloat(destacado.precio_adulto).toFixed(0)}€
+                    </button>
+                </div>
+            </div>
+        `;
     }
     
-    // ✅ SOLICITAR DATOS
-    fetch(ajaxurl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams(searchData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        console.log('📡 Respuesta del servidor:', data);
+    // Otros servicios (grid de 3 columnas)
+    if (otros.length > 0) {
+        servicesHtml += `<div class="services-grid">`;
         
-        if (data.success && data.data) {
-            reservationData = data.data;
-            console.log('✅ Datos de reserva cargados correctamente');
-            updateArrivalInfo();
-            enableActionButtons();
-        } else {
-            console.error('❌ Error del servidor:', data.data || 'Error desconocido');
-            showErrorInfo();
-            enableActionButtons();
-        }
-    })
-    .catch(error => {
-        console.error('❌ Error de conexión:', error);
-        showErrorInfo();
-        enableActionButtons();
-    });
+        otros.forEach(service => {
+            servicesHtml += `
+                <div class="service-card">
+                    ${service.portada_url ? `
+                        <div class="service-image">
+                            <img src="${service.portada_url}" alt="${service.titulo || service.agency_name}">
+                        </div>
+                    ` : ''}
+                    
+                    <div class="service-content">
+                        <h3 class="service-name">${(service.titulo || service.agency_name).toUpperCase()}</h3>
+                        
+                        <p class="service-description">
+                            ${service.descripcion || 'DURACIÓN 3 HORAS APROX.'}
+                        </p>
+                        
+                        <button class="horarios-boton2" onclick="contactService('${service.email}', '${service.phone}', '${service.agency_name}')">
+                            DESDE ${parseFloat(service.precio_adulto).toFixed(0)}€
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        servicesHtml += `</div>`;
+    }
+    
+    servicesHtml += `</div>`;
+    
+    // Insertar después del contenedor principal
+    const mainContainer = document.querySelector('.confirmacion-container.container');
+    if (mainContainer) {
+        mainContainer.insertAdjacentHTML('afterend', servicesHtml);
+    }
 }
+
+function contactService(email, phone, agencyName) {
+    let message = `Para más información sobre ${agencyName}:\n\n`;
+    if (phone) message += `📞 Teléfono: ${phone}\n`;
+    if (email) message += `📧 Email: ${email}`;
+    alert(message);
+}
+
+        // Llamar a loadAvailableServices después de cargar los datos de reserva
+        window.addEventListener('DOMContentLoaded', function() {
+            loadReservationData();
+            // Esperar a que se carguen los datos de reserva
+            setTimeout(loadAvailableServices, 1000);
+        });
+
+        function loadReservationData() {
+            console.log('=== INTENTANDO CARGAR DATOS DE RESERVA ===');
+
+            // ✅ OBTENER PARÁMETROS DE LA URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const localizador = urlParams.get('localizador');
+            const order_id = urlParams.get('order');
+
+            console.log('Localizador desde URL:', localizador);
+            console.log('Order ID desde URL:', order_id);
+
+            // ✅ BUSCAR POR LOCALIZADOR O POR ORDER_ID
+            if (!localizador && !order_id) {
+                console.error('❌ No se encontró localizador ni order_id en la URL');
+                showErrorInfo();
+                enableActionButtons();
+                return;
+            }
+
+            // ✅ PREPARAR DATOS PARA LA BÚSQUEDA
+            const searchData = {
+                action: 'get_confirmed_reservation_data',
+                nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
+            };
+
+            // Añadir el parámetro disponible
+            if (localizador) {
+                searchData.localizador = localizador;
+                console.log('🔍 Buscando por localizador:', localizador);
+            } else if (order_id) {
+                searchData.order_id = order_id;
+                console.log('🔍 Buscando por order_id:', order_id);
+            }
+
+            // ✅ SOLICITAR DATOS
+            fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams(searchData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('📡 Respuesta del servidor:', data);
+
+                    if (data.success && data.data) {
+                        reservationData = data.data;
+                        console.log('✅ Datos de reserva cargados correctamente');
+                        updateArrivalInfo();
+                        enableActionButtons();
+                    } else {
+                        console.error('❌ Error del servidor:', data.data || 'Error desconocido');
+                        showErrorInfo();
+                        enableActionButtons();
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Error de conexión:', error);
+                    showErrorInfo();
+                    enableActionButtons();
+                });
+        }
 
         function updateArrivalInfo() {
             if (!reservationData || !reservationData.detalles) {
@@ -1233,7 +1617,7 @@ function confirmacion_reserva_shortcode()
 
         function viewTicket() {
             console.log('🎫 Solicitando ver comprobante');
-            
+
             if (!reservationData || !reservationData.localizador) {
                 alert('No se encontraron datos de la reserva. Por favor, revisa tu email para ver el comprobante.');
                 return;
@@ -1245,7 +1629,7 @@ function confirmacion_reserva_shortcode()
 
         function downloadTicket() {
             console.log('⬇️ Solicitando descargar comprobante');
-            
+
             if (!reservationData || !reservationData.localizador) {
                 alert('No se encontraron datos de la reserva. Por favor, revisa tu email para descargar el comprobante.');
                 return;
@@ -1256,96 +1640,96 @@ function confirmacion_reserva_shortcode()
         }
 
         function generateAndViewPDF() {
-    console.log('📋 Requesting PDF generation for view...');
-    console.log('🔍 Using localizador:', reservationData.localizador);
-    
-    fetch(ajaxurl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            action: 'generate_ticket_pdf_view',
-            localizador: reservationData.localizador,
-            nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
-        })
-    })
-    .then(response => {
-        console.log('📡 Raw response:', response);
-        return response.json();
-    })
-    .then(data => {
-        console.log('📊 Parsed response:', data);
-        hideLoadingModal();
+            console.log('📋 Requesting PDF generation for view...');
+            console.log('🔍 Using localizador:', reservationData.localizador);
 
-        if (data.success && data.data.pdf_url) {
-            console.log('✅ PDF URL received:', data.data.pdf_url);
-            console.log('📁 File exists:', data.data.file_exists);
-            console.log('📏 File size:', data.data.file_size);
-            
-            // Abrir PDF en nueva ventana
-            window.open(data.data.pdf_url, '_blank');
-        } else {
-            console.error('❌ Error in response:', data);
-            alert('Error generando el comprobante: ' + (data.data || 'Error desconocido'));
+            fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'generate_ticket_pdf_view',
+                        localizador: reservationData.localizador,
+                        nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
+                    })
+                })
+                .then(response => {
+                    console.log('📡 Raw response:', response);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 Parsed response:', data);
+                    hideLoadingModal();
+
+                    if (data.success && data.data.pdf_url) {
+                        console.log('✅ PDF URL received:', data.data.pdf_url);
+                        console.log('📁 File exists:', data.data.file_exists);
+                        console.log('📏 File size:', data.data.file_size);
+
+                        // Abrir PDF en nueva ventana
+                        window.open(data.data.pdf_url, '_blank');
+                    } else {
+                        console.error('❌ Error in response:', data);
+                        alert('Error generando el comprobante: ' + (data.data || 'Error desconocido'));
+                    }
+                })
+                .catch(error => {
+                    hideLoadingModal();
+                    console.error('❌ Fetch error:', error);
+                    alert('Error de conexión al generar el comprobante');
+                });
         }
-    })
-    .catch(error => {
-        hideLoadingModal();
-        console.error('❌ Fetch error:', error);
-        alert('Error de conexión al generar el comprobante');
-    });
-}
 
         function generateAndDownloadPDF() {
-    console.log('⬇️ Requesting PDF generation for download...');
-    console.log('🔍 Using localizador:', reservationData.localizador);
-    
-    fetch(ajaxurl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            action: 'generate_ticket_pdf_download',
-            localizador: reservationData.localizador,
-            nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
-        })
-    })
-    .then(response => {
-        console.log('📡 Raw response:', response);
-        return response.json();
-    })
-    .then(data => {
-        console.log('📊 Parsed response:', data);
-        hideLoadingModal();
+            console.log('⬇️ Requesting PDF generation for download...');
+            console.log('🔍 Using localizador:', reservationData.localizador);
 
-        if (data.success && data.data.pdf_url) {
-            console.log('✅ PDF URL received:', data.data.pdf_url);
-            console.log('📁 File exists:', data.data.file_exists);
-            console.log('📏 File size:', data.data.file_size);
-            
-            // Crear enlace de descarga
-            const link = document.createElement('a');
-            link.href = data.data.pdf_url;
-            link.download = `billete_${reservationData.localizador}.pdf`;
-            link.target = '_blank'; // Por si el download falla, al menos se abre
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            console.log('✅ Download triggered');
-        } else {
-            console.error('❌ Error in response:', data);
-            alert('Error preparando la descarga: ' + (data.data || 'Error desconocido'));
+            fetch(ajaxurl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: new URLSearchParams({
+                        action: 'generate_ticket_pdf_download',
+                        localizador: reservationData.localizador,
+                        nonce: '<?php echo wp_create_nonce('reservas_nonce'); ?>'
+                    })
+                })
+                .then(response => {
+                    console.log('📡 Raw response:', response);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('📊 Parsed response:', data);
+                    hideLoadingModal();
+
+                    if (data.success && data.data.pdf_url) {
+                        console.log('✅ PDF URL received:', data.data.pdf_url);
+                        console.log('📁 File exists:', data.data.file_exists);
+                        console.log('📏 File size:', data.data.file_size);
+
+                        // Crear enlace de descarga
+                        const link = document.createElement('a');
+                        link.href = data.data.pdf_url;
+                        link.download = `billete_${reservationData.localizador}.pdf`;
+                        link.target = '_blank'; // Por si el download falla, al menos se abre
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+
+                        console.log('✅ Download triggered');
+                    } else {
+                        console.error('❌ Error in response:', data);
+                        alert('Error preparando la descarga: ' + (data.data || 'Error desconocido'));
+                    }
+                })
+                .catch(error => {
+                    hideLoadingModal();
+                    console.error('❌ Fetch error:', error);
+                    alert('Error de conexión al preparar la descarga');
+                });
         }
-    })
-    .catch(error => {
-        hideLoadingModal();
-        console.error('❌ Fetch error:', error);
-        alert('Error de conexión al preparar la descarga');
-    });
-}
 
         function showLoadingModal(message) {
             let modal = document.getElementById('loading-modal');
@@ -1418,7 +1802,7 @@ function handle_pdf_download_request()
 function handle_pdf_request($mode = 'view')
 {
     error_log("=== PDF REQUEST: $mode ===");
-    
+
     // Verificar nonce
     if (!wp_verify_nonce($_POST['nonce'], 'reservas_nonce')) {
         error_log('❌ Nonce verification failed');
@@ -1523,7 +1907,6 @@ function handle_pdf_request($mode = 'view')
             'file_exists' => file_exists($pdf_path),
             'file_size' => filesize($pdf_path)
         ));
-
     } catch (Exception $e) {
         error_log('❌ Exception in PDF generation: ' . $e->getMessage());
         error_log('❌ Stack trace: ' . $e->getTraceAsString());
@@ -1548,7 +1931,7 @@ function delete_temporary_pdf_file($pdf_path)
 
 add_action('wp', 'schedule_pdf_cleanup');
 
-function schedule_pdf_cleanup() 
+function schedule_pdf_cleanup()
 {
     if (!wp_next_scheduled('daily_pdf_cleanup')) {
         wp_schedule_event(time(), 'daily', 'daily_pdf_cleanup');
@@ -1561,42 +1944,43 @@ add_action('daily_pdf_cleanup', 'cleanup_old_temp_pdfs');
 add_action('wp_ajax_test_pdf_frontend', 'test_pdf_frontend');
 add_action('wp_ajax_nopriv_test_pdf_frontend', 'test_pdf_frontend');
 
-function test_pdf_frontend() {
+function test_pdf_frontend()
+{
     error_log('=== TEST PDF FRONTEND ===');
-    
+
     // Obtener la reserva más reciente
     global $wpdb;
     $table_reservas = $wpdb->prefix . 'reservas_reservas';
-    
+
     $reserva = $wpdb->get_row(
         "SELECT * FROM $table_reservas ORDER BY created_at DESC LIMIT 1"
     );
-    
+
     if (!$reserva) {
         wp_send_json_error('No hay reservas para probar');
         return;
     }
-    
+
     error_log('Reserva de prueba: ' . print_r($reserva, true));
-    
+
     try {
         if (!class_exists('ReservasPDFGenerator')) {
             require_once RESERVAS_PLUGIN_PATH . 'includes/class-pdf-generator.php';
         }
-        
+
         $reserva_data = (array) $reserva;
         $reserva_data['precio_adulto'] = 10.00;
         $reserva_data['precio_nino'] = 5.00;
         $reserva_data['precio_residente'] = 5.00;
-        
+
         $pdf_generator = new ReservasPDFGenerator();
         $pdf_path = $pdf_generator->generate_ticket_pdf($reserva_data);
-        
+
         if ($pdf_path && file_exists($pdf_path)) {
             $upload_dir = wp_upload_dir();
             $relative_path = str_replace($upload_dir['basedir'], '', $pdf_path);
             $pdf_url = $upload_dir['baseurl'] . $relative_path;
-            
+
             wp_send_json_success(array(
                 'pdf_path' => $pdf_path,
                 'pdf_url' => $pdf_url,
@@ -1607,7 +1991,6 @@ function test_pdf_frontend() {
         } else {
             wp_send_json_error('PDF no se generó correctamente');
         }
-        
     } catch (Exception $e) {
         error_log('Error en test: ' . $e->getMessage());
         wp_send_json_error('Error: ' . $e->getMessage());
@@ -1618,21 +2001,21 @@ function cleanup_old_temp_pdfs()
 {
     $upload_dir = wp_upload_dir();
     $temp_base_dir = $upload_dir['basedir'] . '/reservas-temp';
-    
+
     if (!is_dir($temp_base_dir)) {
         return;
     }
-    
+
     $cleaned = 0;
     $errors = 0;
-    
+
     // Buscar directorios de fechas anteriores a hoy
     $dirs = glob($temp_base_dir . '/????-??-??', GLOB_ONLYDIR);
     $today = date('Y-m-d');
-    
+
     foreach ($dirs as $dir) {
         $dir_date = basename($dir);
-        
+
         // Si el directorio es de días anteriores, eliminar todo su contenido
         if ($dir_date < $today) {
             $files = glob($dir . '/*');
@@ -1645,12 +2028,12 @@ function cleanup_old_temp_pdfs()
                     }
                 }
             }
-            
+
             // Intentar eliminar el directorio vacío
             @rmdir($dir);
         }
     }
-    
+
     if ($cleaned > 0 || $errors > 0) {
         error_log("🧹 Limpieza de PDFs temporales: $cleaned eliminados, $errors errores");
     }
@@ -1730,7 +2113,7 @@ function reservas_login_shortcode()
     }
 
     ob_start();
-    ?>
+?>
     <div
         style="max-width: 400px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         <h2 style="text-align: center; color: #23282d;">Sistema de Reservas - Login</h2>
@@ -1758,7 +2141,7 @@ function reservas_login_shortcode()
             <p style="margin: 5px 0; font-size: 14px;"><strong>Contraseña:</strong> admin123</p>
         </div>
     </div>
-    <?php
+<?php
     return ob_get_clean();
 }
 
@@ -1781,7 +2164,8 @@ add_action('wp_ajax_generar_formulario_pago_redsys', 'ajax_generar_formulario_pa
 add_action('wp_ajax_nopriv_generar_formulario_pago_redsys', 'ajax_generar_formulario_pago_redsys');
 
 // ✅ FUNCIÓN AJAX REDSYS CORREGIDA
-function ajax_generar_formulario_pago_redsys() {
+function ajax_generar_formulario_pago_redsys()
+{
     error_log('=== FUNCIÓN REDSYS EJECUTADA ===');
 
     try {
@@ -1808,10 +2192,9 @@ function ajax_generar_formulario_pago_redsys() {
         }
 
         $formulario_html = generar_formulario_redsys($reserva);
-        
+
         error_log("✅ Formulario Redsys generado correctamente");
         wp_send_json_success($formulario_html);
-
     } catch (Exception $e) {
         error_log('❌ Excepción en Redsys: ' . $e->getMessage());
         wp_send_json_error('Error: ' . $e->getMessage());
@@ -1829,37 +2212,38 @@ add_action('wp_ajax_nopriv_redsys_notification', 'handle_redsys_notification');
 add_action('wp_ajax_debug_redsys_flow', 'debug_redsys_flow');
 add_action('wp_ajax_nopriv_debug_redsys_flow', 'debug_redsys_flow');
 
-function debug_redsys_flow() {
+function debug_redsys_flow()
+{
     if (!session_id()) {
         session_start();
     }
-    
+
     $order_id = $_POST['order_id'] ?? '';
-    
+
     error_log('=== DEBUG FLUJO REDSYS ===');
     error_log('Order ID recibido: ' . $order_id);
     error_log('Session ID: ' . session_id());
     error_log('Session data: ' . print_r($_SESSION, true));
-    
+
     // Verificar si hay datos en transient
     if ($order_id) {
         $transient_data = get_transient('redsys_order_' . $order_id);
         error_log('Datos en transient: ' . print_r($transient_data, true));
     }
-    
+
     // Verificar últimas reservas
     global $wpdb;
     $table_reservas = $wpdb->prefix . 'reservas_reservas';
-    
+
     $recent_reservas = $wpdb->get_results(
         "SELECT * FROM $table_reservas 
          WHERE created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
          ORDER BY created_at DESC 
          LIMIT 5"
     );
-    
+
     error_log('Reservas recientes: ' . print_r($recent_reservas, true));
-    
+
     wp_send_json_success(array(
         'order_id' => $order_id,
         'session_id' => session_id(),
@@ -1868,7 +2252,8 @@ function debug_redsys_flow() {
         'recent_reservas' => $recent_reservas
     ));
 }
-function handle_redsys_notification() {
+function handle_redsys_notification()
+{
     error_log('🔁 Recibida notificación de Redsys (MerchantURL)');
     error_log('POST data: ' . print_r($_POST, true));
     error_log('GET data: ' . print_r($_GET, true));
@@ -2055,7 +2440,8 @@ function get_confirmed_reservation_data()
 add_action('wp_ajax_get_confirmed_reservation_data', 'ajax_get_confirmed_reservation_data');
 add_action('wp_ajax_nopriv_get_confirmed_reservation_data', 'ajax_get_confirmed_reservation_data');
 
-function ajax_get_confirmed_reservation_data() {
+function ajax_get_confirmed_reservation_data()
+{
     if (!wp_verify_nonce($_POST['nonce'], 'reservas_nonce')) {
         wp_send_json_error('Error de seguridad');
         return;
@@ -2064,47 +2450,47 @@ function ajax_get_confirmed_reservation_data() {
     // ✅ OBTENER PARÁMETROS DE BÚSQUEDA
     $localizador = sanitize_text_field($_POST['localizador'] ?? '');
     $order_id = sanitize_text_field($_POST['order_id'] ?? '');
-    
+
     error_log('=== BUSCANDO DATOS DE CONFIRMACIÓN ===');
     error_log('Localizador recibido: ' . $localizador);
     error_log('Order ID recibido: ' . $order_id);
-    
+
     // ✅ VERIFICAR QUE TENEMOS AL MENOS UN PARÁMETRO
     if (empty($localizador) && empty($order_id)) {
         error_log('❌ No se proporcionó localizador ni order_id');
         wp_send_json_error('No se proporcionó localizador ni order_id válido');
         return;
     }
-    
+
     global $wpdb;
     $table_reservas = $wpdb->prefix . 'reservas_reservas';
-    
+
     $reserva = null;
-    
+
     // ✅ BUSCAR POR LOCALIZADOR PRIMERO
     if (!empty($localizador)) {
         $reserva = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $table_reservas WHERE localizador = %s AND estado = 'confirmada' LIMIT 1",
             $localizador
         ));
-        
+
         if ($reserva) {
             error_log('✅ Reserva encontrada por localizador: ' . $reserva->localizador);
         }
     }
-    
+
     // ✅ SI NO SE ENCUENTRA, BUSCAR POR ORDER_ID
     if (!$reserva && !empty($order_id)) {
         $reserva = $wpdb->get_row($wpdb->prepare(
             "SELECT * FROM $table_reservas WHERE redsys_order_id = %s AND estado = 'confirmada' LIMIT 1",
             $order_id
         ));
-        
+
         if ($reserva) {
             error_log('✅ Reserva encontrada por order_id: ' . $reserva->localizador . ' (Order: ' . $order_id . ')');
         }
     }
-    
+
     if ($reserva) {
         $data = array(
             'localizador' => $reserva->localizador,
@@ -2116,11 +2502,11 @@ function ajax_get_confirmed_reservation_data() {
                 'precio_final' => $reserva->precio_final
             )
         );
-        
+
         wp_send_json_success($data);
         return;
     }
-    
+
     error_log('❌ No se encontró reserva con localizador: ' . $localizador . ' ni order_id: ' . $order_id);
     wp_send_json_error('No se encontró reserva con esos datos');
 }
@@ -2229,21 +2615,22 @@ function debug_reservas_recientes()
 add_action('wp_ajax_create_conductor_user_manual', 'create_conductor_user_manual');
 add_action('wp_ajax_nopriv_create_conductor_user_manual', 'create_conductor_user_manual');
 
-function create_conductor_user_manual() {
+function create_conductor_user_manual()
+{
     // Solo permitir en desarrollo o con permisos de administrador
     if (!current_user_can('administrator') && !isset($_GET['force'])) {
         wp_die('No tienes permisos para esta acción');
     }
-    
+
     global $wpdb;
     $table_users = $wpdb->prefix . 'reservas_users';
-    
+
     // Verificar si ya existe
     $existing = $wpdb->get_var($wpdb->prepare(
         "SELECT COUNT(*) FROM $table_users WHERE username = %s",
         'conductor'
     ));
-    
+
     if ($existing == 0) {
         $result = $wpdb->insert(
             $table_users,
@@ -2256,7 +2643,7 @@ function create_conductor_user_manual() {
                 'created_at' => current_time('mysql')
             )
         );
-        
+
         if ($result) {
             echo '✅ Usuario conductor creado exitosamente<br>';
             echo '<strong>Usuario:</strong> conductor<br>';
@@ -2272,7 +2659,7 @@ function create_conductor_user_manual() {
             array('password' => password_hash('conductorbusmedina', PASSWORD_DEFAULT)),
             array('username' => 'conductor', 'role' => 'conductor')
         );
-        
+
         if ($result !== false) {
             echo '✅ Usuario conductor ya existía, contraseña actualizada<br>';
             echo '<strong>Usuario:</strong> conductor<br>';
@@ -2288,15 +2675,16 @@ function create_conductor_user_manual() {
 add_action('wp_ajax_test_conductor_login', 'test_conductor_login');
 add_action('wp_ajax_nopriv_test_conductor_login', 'test_conductor_login');
 
-function test_conductor_login() {
+function test_conductor_login()
+{
     global $wpdb;
     $table_users = $wpdb->prefix . 'reservas_users';
-    
+
     $user = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_users WHERE username = %s AND role = 'conductor'",
         'conductor'
     ));
-    
+
     if ($user) {
         echo '✅ Usuario conductor encontrado en la base de datos<br>';
         echo '<strong>ID:</strong> ' . $user->id . '<br>';
@@ -2305,11 +2693,11 @@ function test_conductor_login() {
         echo '<strong>Role:</strong> ' . $user->role . '<br>';
         echo '<strong>Status:</strong> ' . $user->status . '<br>';
         echo '<strong>Creado:</strong> ' . $user->created_at . '<br>';
-        
+
         // Verificar contraseña
         $password_check = password_verify('conductorbusmedina', $user->password);
         echo '<strong>Contraseña verificada:</strong> ' . ($password_check ? '✅ Correcta' : '❌ Incorrecta') . '<br>';
-        
+
         echo '<br><a href="' . home_url('/reservas-login/') . '">Probar login manual</a>';
     } else {
         echo '❌ Usuario conductor no encontrado en la base de datos<br>';
@@ -2320,27 +2708,28 @@ function test_conductor_login() {
 add_action('wp_ajax_emergency_create_conductor', 'emergency_create_conductor');
 add_action('wp_ajax_nopriv_emergency_create_conductor', 'emergency_create_conductor');
 
-function emergency_create_conductor() {
+function emergency_create_conductor()
+{
     global $wpdb;
     $table_users = $wpdb->prefix . 'reservas_users';
-    
+
     echo '<h2>🔧 Creación de Usuario Conductor</h2>';
-    
+
     // Verificar tabla
     $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_users'") == $table_users;
     echo '<p><strong>Tabla existe:</strong> ' . ($table_exists ? '✅ SÍ' : '❌ NO') . '</p>';
-    
+
     if (!$table_exists) {
         echo '<p style="color: red;">❌ La tabla de usuarios no existe. Reactiva el plugin.</p>';
         return;
     }
-    
+
     // Buscar conductor existente
     $existing = $wpdb->get_row($wpdb->prepare(
         "SELECT * FROM $table_users WHERE username = %s",
         'conductor'
     ));
-    
+
     if ($existing) {
         echo '<p><strong>Usuario encontrado:</strong> ✅ SÍ</p>';
         echo '<p><strong>ID:</strong> ' . $existing->id . '</p>';
@@ -2348,23 +2737,22 @@ function emergency_create_conductor() {
         echo '<p><strong>Status:</strong> ' . $existing->status . '</p>';
         echo '<p><strong>Email:</strong> ' . $existing->email . '</p>';
         echo '<p><strong>Creado:</strong> ' . $existing->created_at . '</p>';
-        
+
         // Actualizar contraseña
         $update_result = $wpdb->update(
             $table_users,
             array('password' => password_hash('conductor', PASSWORD_DEFAULT)),
             array('id' => $existing->id)
         );
-        
+
         echo '<p><strong>Contraseña actualizada:</strong> ' . ($update_result !== false ? '✅ SÍ' : '❌ NO') . '</p>';
-        
+
         if ($update_result === false) {
             echo '<p style="color: red;">Error: ' . $wpdb->last_error . '</p>';
         }
-        
     } else {
         echo '<p><strong>Usuario encontrado:</strong> ❌ NO - Creando...</p>';
-        
+
         $insert_result = $wpdb->insert(
             $table_users,
             array(
@@ -2376,25 +2764,60 @@ function emergency_create_conductor() {
                 'created_at' => current_time('mysql')
             )
         );
-        
+
         echo '<p><strong>Usuario creado:</strong> ' . ($insert_result ? '✅ SÍ' : '❌ NO') . '</p>';
-        
+
         if (!$insert_result) {
             echo '<p style="color: red;">Error: ' . $wpdb->last_error . '</p>';
         } else {
             echo '<p style="color: green;">✅ Usuario conductor creado correctamente con ID: ' . $wpdb->insert_id . '</p>';
         }
     }
-    
+
     echo '<hr>';
     echo '<h3>📋 Credenciales del Conductor</h3>';
     echo '<p><strong>Usuario:</strong> <code>conductor</code></p>';
     echo '<p><strong>Contraseña:</strong> <code>conductor</code></p>';
     echo '<p><strong>URL de Login:</strong> <a href="' . home_url('/reservas-login/') . '" target="_blank">' . home_url('/reservas-login/') . '</a></p>';
-    
+
     exit;
 }
 
+
+// ✅ FUNCIÓN TEMPORAL PARA ACTUALIZAR TABLA
+add_action('wp_ajax_force_update_services_table', 'force_update_services_table_manual');
+function force_update_services_table_manual()
+{
+    if (!current_user_can('administrator')) {
+        wp_die('Sin permisos');
+    }
+
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'reservas_agency_services';
+
+    // Verificar si existe el campo
+    $column_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_name LIKE 'horarios_disponibles'");
+
+    if (empty($column_exists)) {
+        $result = $wpdb->query("ALTER TABLE $table_name ADD COLUMN horarios_disponibles TEXT NULL AFTER dias_disponibles");
+
+        if ($result !== false) {
+            echo '✅ Columna horarios_disponibles añadida correctamente';
+        } else {
+            echo '❌ Error: ' . $wpdb->last_error;
+        }
+    } else {
+        echo 'ℹ️ La columna ya existe';
+    }
+
+    // Verificar estructura final
+    $columns = $wpdb->get_results("SHOW COLUMNS FROM $table_name");
+    echo '<h3>Estructura actual de la tabla:</h3><pre>';
+    print_r($columns);
+    echo '</pre>';
+
+    exit;
+}
 
 
 
