@@ -150,6 +150,7 @@ class SistemaReservas
             'includes/class-redsys-handler.php',
             'includes/class-conductor-admin.php',
             'includes/class-agency-services-admin.php',
+            'includes/class-agency-services-frontend.php',
         );
 
         foreach ($files as $file) {
@@ -173,6 +174,10 @@ class SistemaReservas
         if (class_exists('ReservasDashboard')) {
             $this->dashboard = new ReservasDashboard();
         }
+
+        if (class_exists('ReservasAgencyServicesFrontend')) {
+    new ReservasAgencyServicesFrontend();
+}
 
         if (class_exists('ReservasCalendarAdmin')) {
             $this->calendar_admin = new ReservasCalendarAdmin();
@@ -541,6 +546,39 @@ class SistemaReservas
 
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_discounts);
+
+        // Tabla de reservas de visitas guiadas
+        $table_visitas = $wpdb->prefix . 'reservas_visitas';
+        $sql_visitas = "CREATE TABLE $table_visitas (
+    id mediumint(9) NOT NULL AUTO_INCREMENT,
+    localizador varchar(20) NOT NULL UNIQUE,
+    service_id mediumint(9) NOT NULL,
+    agency_id mediumint(9) NOT NULL,
+    fecha date NOT NULL,
+    hora time NOT NULL,
+    nombre varchar(100) NOT NULL,
+    apellidos varchar(100) NOT NULL,
+    email varchar(100) NOT NULL,
+    telefono varchar(20) NOT NULL,
+    adultos int(11) DEFAULT 0,
+    ninos int(11) DEFAULT 0,
+    total_personas int(11) NOT NULL,
+    precio_total decimal(10,2) NOT NULL,
+    estado enum('pendiente', 'confirmada', 'cancelada') DEFAULT 'confirmada',
+    metodo_pago varchar(50) DEFAULT 'pendiente_tpv',
+    transaction_id varchar(100) NULL,
+    created_at datetime DEFAULT CURRENT_TIMESTAMP,
+    updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY service_id (service_id),
+    KEY agency_id (agency_id),
+    KEY fecha (fecha),
+    KEY estado (estado),
+    KEY localizador (localizador)
+) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql_visitas);
 
         // ✅ TABLA DE CONFIGURACIÓN CON NUEVOS CAMPOS
         $table_configuration = $wpdb->prefix . 'reservas_configuration';
@@ -977,34 +1015,34 @@ function confirmacion_reserva_shortcode()
         }
 
         .service-card-destacado {
-    max-width: 100%;
-}
+            max-width: 100%;
+        }
 
-.service-card-destacado .service-name {
-    font-size: 32px !important;
-    margin-bottom: 20px;
-}
+        .service-card-destacado .service-name {
+            font-size: 32px !important;
+            margin-bottom: 20px;
+        }
 
-.service-card-destacado .service-description {
-    font-size: 18px !important;
-    margin-bottom: 30px;
-}
+        .service-card-destacado .service-description {
+            font-size: 18px !important;
+            margin-bottom: 30px;
+        }
 
-.service-card-destacado .horarios-boton2 {
-    padding: 18px 250px;
-    font-size: 20px;
-}
+        .service-card-destacado .horarios-boton2 {
+            padding: 18px 250px;
+            font-size: 20px;
+        }
 
-@media (max-width: 768px) {
-    .service-card-destacado .horarios-boton2 {
-        padding: 15px 50px;
-        font-size: 16px;
-    }
-    
-    .service-card-destacado .service-name {
-        font-size: 24px !important;
-    }
-}
+        @media (max-width: 768px) {
+            .service-card-destacado .horarios-boton2 {
+                padding: 15px 50px;
+                font-size: 16px;
+            }
+
+            .service-card-destacado .service-name {
+                font-size: 24px !important;
+            }
+        }
 
         .services-title {
             text-align: center;
@@ -1433,7 +1471,7 @@ function confirmacion_reserva_shortcode()
                 });
         }
 
-        function renderAvailableServices(services) {
+function renderAvailableServices(services) {
     if (!services || services.length === 0) {
         console.log('No hay servicios para mostrar');
         return;
@@ -1458,7 +1496,7 @@ function confirmacion_reserva_shortcode()
     // Si hay servicio destacado (prioridad 1) - GRANDE ARRIBA
     if (destacado) {
         servicesHtml += `
-            <div class="service-card service-card-destacado" style="grid-column: 1 / -1; margin-bottom: 30px;">
+            <div class="service-card service-card-destacado" style="grid-column: 1 / -1; margin-bottom: 30px;" data-service-id="${destacado.id}">
                 ${destacado.portada_url ? `
                     <div class="service-image" style="height: 250px;">
                         <img src="${destacado.portada_url}" alt="${destacado.titulo || destacado.agency_name}">
@@ -1472,7 +1510,7 @@ function confirmacion_reserva_shortcode()
                         ${destacado.descripcion || 'DURACIÓN 3 HORAS APROX.'}
                     </p>
                     
-                    <button class="horarios-boton2" onclick="contactService('${destacado.email}', '${destacado.phone}', '${destacado.agency_name}')">
+                    <button class="horarios-boton2" onclick="selectService(${destacado.id})">
                         DESDE ${parseFloat(destacado.precio_adulto).toFixed(0)}€
                     </button>
                 </div>
@@ -1486,7 +1524,7 @@ function confirmacion_reserva_shortcode()
         
         otros.forEach(service => {
             servicesHtml += `
-                <div class="service-card">
+                <div class="service-card" data-service-id="${service.id}">
                     ${service.portada_url ? `
                         <div class="service-image">
                             <img src="${service.portada_url}" alt="${service.titulo || service.agency_name}">
@@ -1500,7 +1538,7 @@ function confirmacion_reserva_shortcode()
                             ${service.descripcion || 'DURACIÓN 3 HORAS APROX.'}
                         </p>
                         
-                        <button class="horarios-boton23" onclick="contactService('${service.email}', '${service.phone}', '${service.agency_name}')">
+                        <button class="horarios-boton23" onclick="selectService(${service.id})">
                             DESDE ${parseFloat(service.precio_adulto).toFixed(0)}€
                         </button>
                     </div>
@@ -1513,6 +1551,9 @@ function confirmacion_reserva_shortcode()
     
     servicesHtml += `</div>`;
     
+    // Guardar los servicios en una variable global para acceder después
+    window.availableServices = services;
+    
     // Insertar después del contenedor principal
     const mainContainer = document.querySelector('.confirmacion-container.container');
     if (mainContainer) {
@@ -1520,12 +1561,122 @@ function confirmacion_reserva_shortcode()
     }
 }
 
-function contactService(email, phone, agencyName) {
-    let message = `Para más información sobre ${agencyName}:\n\n`;
-    if (phone) message += `📞 Teléfono: ${phone}\n`;
-    if (email) message += `📧 Email: ${email}`;
-    alert(message);
+function selectService(serviceId) {
+    console.log('Servicio seleccionado ID:', serviceId);
+    
+    // Buscar el servicio en el array global
+    const service = window.availableServices.find(s => parseInt(s.id) === parseInt(serviceId));
+    
+    if (!service) {
+        alert('Error: No se encontraron datos del servicio');
+        return;
+    }
+    
+    console.log('Datos del servicio completos:', service);
+    
+    // Preparar datos para guardar en sessionStorage
+    const serviceData = {
+        id: service.id,
+        agency_id: service.agency_id,
+        agency_name: service.agency_name,
+        titulo: service.titulo || service.agency_name,
+        descripcion: service.descripcion || '',
+        portada_url: service.portada_url || '',
+        logo_url: service.logo_url || '',
+        precio_adulto: parseFloat(service.precio_adulto),
+        precio_nino: parseFloat(service.precio_nino),
+        fecha: reservationData.detalles.fecha,
+        hora: reservationData.detalles.hora,
+        email: service.email,
+        phone: service.phone
+    };
+    
+    console.log('Guardando datos en sessionStorage:', serviceData);
+    sessionStorage.setItem('selectedServiceData', JSON.stringify(serviceData));
+    
+    // ✅ CONSTRUIR URL RELATIVA CORRECTAMENTE
+    const currentPath = window.location.pathname;
+    let targetUrl;
+    
+    // Si estamos en un subdirectorio (como /bravobravo2parte/)
+    if (currentPath.includes('/')) {
+        const pathParts = currentPath.split('/').filter(part => part !== '');
+        
+        // Si hay al menos una parte en la ruta (subdirectorio)
+        if (pathParts.length > 0 && pathParts[0] !== 'detalles-reserva-visita') {
+            // Usar el primer segmento como base
+            targetUrl = window.location.origin + '/' + pathParts[0] + '/detalles-reserva-visita/';
+        } else {
+            // Estamos en la raíz
+            targetUrl = window.location.origin + '/detalles-reserva-visita/';
+        }
+    } else {
+        // Estamos en la raíz
+        targetUrl = window.location.origin + '/detalles-reserva-visita/';
+    }
+    
+    console.log('Redirigiendo a:', targetUrl);
+    
+    // Redirigir a la página de detalles
+    window.location.href = targetUrl;
 }
+
+        function contactService(email, phone, agencyName) {
+            // En lugar de alert, redirigir a la página de detalles
+            console.log('Servicio seleccionado:', agencyName);
+
+            // Buscar los datos completos del servicio en los servicios renderizados
+            const serviceCards = document.querySelectorAll('.service-card');
+            let selectedService = null;
+
+            serviceCards.forEach(card => {
+                const cardName = card.querySelector('.service-name').textContent.trim();
+                if (cardName === agencyName.toUpperCase()) {
+                    // Extraer datos del servicio
+                    const serviceButton = card.querySelector('button[onclick*="contactService"]');
+                    const onclickAttr = serviceButton.getAttribute('onclick');
+
+                    // Parsear los parámetros
+                    const params = onclickAttr.match(/contactService\('([^']*)',\s*'([^']*)',\s*'([^']*)'/);
+
+                    if (params) {
+                        selectedService = {
+                            agency_name: params[3],
+                            email: params[1],
+                            phone: params[2]
+                        };
+                    }
+                }
+            });
+
+            if (!selectedService) {
+                alert('Error al cargar los datos del servicio');
+                return;
+            }
+
+            // Guardar datos en sessionStorage
+            const serviceData = {
+                id: selectedService.id || Date.now(), // ID temporal si no existe
+                agency_id: selectedService.agency_id,
+                agency_name: selectedService.agency_name,
+                titulo: selectedService.titulo || selectedService.agency_name,
+                descripcion: selectedService.descripcion || '',
+                portada_url: selectedService.portada_url || '',
+                logo_url: selectedService.logo_url || '',
+                precio_adulto: selectedService.precio_adulto,
+                precio_nino: selectedService.precio_nino,
+                fecha: reservationData.detalles.fecha,
+                hora: reservationData.detalles.hora,
+                email: selectedService.email,
+                phone: selectedService.phone
+            };
+
+            console.log('Guardando datos del servicio:', serviceData);
+            sessionStorage.setItem('selectedServiceData', JSON.stringify(serviceData));
+
+            // Redirigir a la página de detalles
+            window.location.href = '/detalles-reserva-visita/';
+        }
 
         // Llamar a loadAvailableServices después de cargar los datos de reserva
         window.addEventListener('DOMContentLoaded', function() {
