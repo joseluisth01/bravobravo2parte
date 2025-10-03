@@ -973,6 +973,7 @@ function confirmacion_reserva_shortcode()
             border-radius: 20px;
             box-shadow: 0px 0px 15px 0px rgba(46, 45, 44, .2);
             backdrop-filter: blur(3px);
+            margin-bottom: 50px;
         }
 
         .service-card-destacado {
@@ -1033,7 +1034,7 @@ function confirmacion_reserva_shortcode()
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
+            gap: 20px;
             margin-top: 30px;
         }
 
@@ -1106,6 +1107,29 @@ function confirmacion_reserva_shortcode()
         }
 
         .horarios-boton2:hover {
+            transform: translateY(-2px);
+            text-decoration: none;
+            background-color: #efcf4b;
+        }
+
+        .horarios-boton23 {
+            background-color: #efcf4b;
+            color: #2e2d2c;
+            padding: 15px 100px;
+            width: 100%;
+            border-radius: 10px;
+            text-decoration: none;
+            font-family: "Duran-Medium";
+            font-weight: bold;
+            font-size: 18px;
+            letter-spacing: 2px;
+            transition: all .3s ease;
+            display: inline-block;
+            box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, .8);
+            border: 0px !important;
+        }
+
+        .horarios-boton23:hover {
             transform: translateY(-2px);
             text-decoration: none;
             background-color: #efcf4b;
@@ -1436,7 +1460,7 @@ function confirmacion_reserva_shortcode()
         servicesHtml += `
             <div class="service-card service-card-destacado" style="grid-column: 1 / -1; margin-bottom: 30px;">
                 ${destacado.portada_url ? `
-                    <div class="service-image" style="height: 350px;">
+                    <div class="service-image" style="height: 250px;">
                         <img src="${destacado.portada_url}" alt="${destacado.titulo || destacado.agency_name}">
                     </div>
                 ` : ''}
@@ -1476,7 +1500,7 @@ function confirmacion_reserva_shortcode()
                             ${service.descripcion || 'DURACIÓN 3 HORAS APROX.'}
                         </p>
                         
-                        <button class="horarios-boton2" onclick="contactService('${service.email}', '${service.phone}', '${service.agency_name}')">
+                        <button class="horarios-boton23" onclick="contactService('${service.email}', '${service.phone}', '${service.agency_name}')">
                             DESDE ${parseFloat(service.precio_adulto).toFixed(0)}€
                         </button>
                     </div>

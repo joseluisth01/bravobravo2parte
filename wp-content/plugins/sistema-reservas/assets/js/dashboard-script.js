@@ -7094,20 +7094,23 @@ jQuery(document).off('submit', '#editAgencyForm').on('submit', '#editAgencyForm'
 
 
 /**
- * Guardar servicio al editar agencia (SIN CAMBIOS - ya estaba bien)
+ * Guardar servicio al editar agencia (CORREGIDO - CON FORMDATA COMPLETO)
  */
 function saveAgencyServiceOnEdit(agencyId) {
+    console.log('=== GUARDANDO SERVICIO EN EDICIÓN ===');
+    console.log('Agency ID:', agencyId);
+    
     const servicioActivo = jQuery('#edit_servicio_activo').is(':checked');
     
+    // ✅ CREAR FormData CORRECTAMENTE
     const serviceFormData = new FormData();
     serviceFormData.append('action', 'save_agency_service');
     serviceFormData.append('agency_id', agencyId);
     serviceFormData.append('nonce', reservasAjax.nonce);
+    serviceFormData.append('servicio_activo', servicioActivo ? '1' : '0');
     
     if (servicioActivo) {
-        serviceFormData.append('servicio_activo', '1');
-        
-        // ✅ NUEVO: Recopilar horarios usando la función auxiliar
+        // Recopilar horarios usando la función auxiliar
         const horarios = collectHorariosData();
         
         if (Object.keys(horarios).length === 0) {
@@ -7121,7 +7124,7 @@ function saveAgencyServiceOnEdit(agencyId) {
             });
         });
         
-        // Precios
+        // Validar y añadir precios
         const precioAdulto = parseFloat(jQuery('#edit_precio_adulto_servicio').val());
         if (!precioAdulto || precioAdulto <= 0) {
             alert('Error: El precio de adulto debe ser mayor a 0');
@@ -7132,42 +7135,93 @@ function saveAgencyServiceOnEdit(agencyId) {
         serviceFormData.append('precio_nino', jQuery('#edit_precio_nino_servicio').val());
         serviceFormData.append('descripcion', jQuery('#edit_descripcion_servicio').val());
         serviceFormData.append('titulo', jQuery('#edit_titulo_servicio').val());
-serviceFormData.append('orden_prioridad', jQuery('#edit_orden_prioridad').val());
+        serviceFormData.append('orden_prioridad', jQuery('#edit_orden_prioridad').val());
         
-        // Archivos
-        const logoFile = jQuery('#edit_logo_image')[0].files[0];
-        if (logoFile) {
+        // ✅ CRÍTICO: Verificar y añadir archivos CORRECTAMENTE
+        const logoInput = document.getElementById('edit_logo_image');
+        const portadaInput = document.getElementById('edit_portada_image');
+        
+        if (logoInput && logoInput.files && logoInput.files.length > 0) {
+            const logoFile = logoInput.files[0];
+            console.log('✅ Logo nuevo detectado:', logoFile.name, logoFile.size, 'bytes');
             serviceFormData.append('logo_image', logoFile);
+        } else {
+            console.log('ℹ️ No hay logo nuevo');
         }
         
-        const portadaFile = jQuery('#edit_portada_image')[0].files[0];
-        if (portadaFile) {
+        if (portadaInput && portadaInput.files && portadaInput.files.length > 0) {
+            const portadaFile = portadaInput.files[0];
+            console.log('✅ Portada nueva detectada:', portadaFile.name, portadaFile.size, 'bytes');
             serviceFormData.append('portada_image', portadaFile);
+        } else {
+            console.log('ℹ️ No hay portada nueva');
         }
     }
     
+    // Debug: Ver qué se va a enviar
+    console.log('📋 Datos del servicio a enviar:');
+    for (let pair of serviceFormData.entries()) {
+        if (pair[1] instanceof File) {
+            console.log(pair[0] + ':', 'FILE -', pair[1].name, pair[1].size, 'bytes');
+        } else {
+            console.log(pair[0] + ':', pair[1]);
+        }
+    }
+    
+    // ✅ ENVIAR CON AJAX CONFIGURADO PARA ARCHIVOS
     jQuery.ajax({
         url: reservasAjax.ajax_url,
         type: 'POST',
         data: serviceFormData,
-        processData: false,
-        contentType: false,
+        processData: false,  // ✅ CRÍTICO
+        contentType: false,  // ✅ CRÍTICO
         success: function(response) {
+            console.log('✅ Respuesta del servidor:', response);
+            
             if (response.success) {
-                alert('Agencia y servicio actualizados correctamente');
+                alert('✅ Agencia y servicio actualizados correctamente');
             } else {
-                alert('Agencia actualizada, pero hubo un error con el servicio: ' + response.data);
+                alert('❌ Agencia actualizada, pero hubo un error con el servicio: ' + response.data);
             }
             closeEditAgencyModal();
             loadAgenciesSection();
         },
         error: function(xhr, status, error) {
-            console.error('Error guardando servicio:', error);
-            alert('Error de conexión al guardar servicio');
+            console.error('❌ Error guardando servicio:', error);
+            console.error('Status:', status);
+            console.error('Response:', xhr.responseText);
+            alert('❌ Error de conexión al guardar servicio');
             closeEditAgencyModal();
             loadAgenciesSection();
         }
     });
+}
+
+
+/**
+ * Recopilar horarios del formulario (para EDICIÓN principalmente)
+ */
+function collectHorariosData() {
+    const horarios = {};
+    
+    // Buscar checkboxes marcados (tanto en crear como en editar)
+    const checkboxes = document.querySelectorAll('.day-checkbox input:checked, .edit-day-checkbox:checked');
+    
+    checkboxes.forEach(checkbox => {
+        const day = checkbox.value;
+        const isEdit = checkbox.classList.contains('edit-day-checkbox');
+        const prefix = isEdit ? 'edit-' : '';
+        const hoursInputs = document.querySelectorAll(`#${prefix}hours-${day} input[type="time"]`);
+        
+        horarios[day] = [];
+        hoursInputs.forEach(input => {
+            if (input.value) {
+                horarios[day].push(input.value);
+            }
+        });
+    });
+    
+    return horarios;
 }
 
 
