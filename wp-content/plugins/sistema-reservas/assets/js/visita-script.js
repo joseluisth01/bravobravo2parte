@@ -19,7 +19,7 @@ jQuery(document).ready(function($) {
     }
     
     // Event listeners para cálculo de precio
-    $('#adultos-visita, #ninos-visita').on('input change', function() {
+    $('#adultos-visita, #ninos-visita, #ninos-menores-visita').on('input change', function() { // ✅ AÑADIDO #ninos-menores-visita
         calculateTotalPrice();
     });
 });
@@ -43,7 +43,7 @@ function loadServiceData() {
         serviceData = JSON.parse(dataString);
         console.log('Datos del servicio cargados:', serviceData);
         
-        // Rellenar la página con los datos
+        // Rellenar la página con los datos (esto ya incluye el autorelleno)
         populateServicePage();
         
         // Calcular precio inicial
@@ -78,13 +78,16 @@ function populateServicePage() {
     });
     
     jQuery('#fecha-visita').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
-    jQuery('#hora-inicio').text(serviceData.hora || '-');
+    
+    // Quitar segundos de la hora
+    const horaInicio = serviceData.hora.substring(0, 5);
+    jQuery('#hora-inicio').text(horaInicio);
     
     // Calcular hora de fin (sumar 3.5 horas)
-    const horaInicio = serviceData.hora.split(':');
+    const horaInicioArr = serviceData.hora.split(':');
     const fechaFin = new Date(fechaObj);
-    fechaFin.setHours(parseInt(horaInicio[0]) + 3);
-    fechaFin.setMinutes(parseInt(horaInicio[1]) + 30);
+    fechaFin.setHours(parseInt(horaInicioArr[0]) + 3);
+    fechaFin.setMinutes(parseInt(horaInicioArr[1]) + 30);
     
     const horaFin = fechaFin.toLocaleTimeString('es-ES', {
         hour: '2-digit',
@@ -94,17 +97,25 @@ function populateServicePage() {
     jQuery('#fecha-fin').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
     jQuery('#hora-fin').text(horaFin);
     
-    // ✅ PRECIOS DINÁMICOS DESDE EL SERVICIO
+    // Precios dinámicos desde el servicio
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
+    const precioNinoMenor = parseFloat(serviceData.precio_nino_menor) || 0;
+    
+    console.log('Precios cargados del servicio:');
+    console.log('- Precio adulto:', precioAdulto);
+    console.log('- Precio niño (5-12):', precioNino);
+    console.log('- Precio niño menor (<5):', precioNinoMenor);
     
     // Mostrar precios en la sección de información
     jQuery('#precio-adulto-info').text(precioAdulto.toFixed(0) + '€');
     jQuery('#precio-nino-info').text(precioNino.toFixed(0) + '€');
+    jQuery('#precio-nino-menor-info').text(precioNinoMenor.toFixed(0) + '€');
     
     console.log('✅ Página rellenada correctamente');
-    console.log('Precio adulto:', precioAdulto);
-    console.log('Precio niño:', precioNino);
+    
+    // ✅ LLAMAR AL AUTORELLENO DE PERSONAS
+    autoFillPersonasFromBusReservation();
 }
 
 /**
@@ -118,22 +129,78 @@ function calculateTotalPrice() {
     
     const adultos = parseInt(jQuery('#adultos-visita').val()) || 0;
     const ninos = parseInt(jQuery('#ninos-visita').val()) || 0;
+    const ninosMenores = parseInt(jQuery('#ninos-menores-visita').val()) || 0; // ✅ NUEVO
     
     // ✅ USAR PRECIOS DINÁMICOS DEL SERVICIO
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
+    const precioNinoMenor = parseFloat(serviceData.precio_nino_menor) || 0; // ✅ NUEVO
     
-    const total = (adultos * precioAdulto) + (ninos * precioNino);
+    const total = (adultos * precioAdulto) + (ninos * precioNino) + (ninosMenores * precioNinoMenor); // ✅ MODIFICADO
     
     jQuery('#total-visita').text(total.toFixed(2) + '€');
     
-    console.log('Precio calculado:', {
+    console.log('💰 Precio calculado:', {
         adultos: adultos,
         ninos: ninos,
+        ninosMenores: ninosMenores, // ✅ NUEVO
         precioAdulto: precioAdulto,
         precioNino: precioNino,
+        precioNinoMenor: precioNinoMenor, // ✅ NUEVO
         total: total
     });
+}
+
+/**
+ * Autorellenar campos de personas desde la reserva del autobús
+ */
+function autoFillPersonasFromBusReservation() {
+    console.log('=== INTENTANDO AUTORELLENAR PERSONAS DESDE RESERVA DE AUTOBÚS ===');
+    
+    try {
+        // Intentar obtener datos de la reserva del autobús
+        const busReservationString = sessionStorage.getItem('reservationData');
+        
+        if (!busReservationString) {
+            console.log('No hay datos de reserva de autobús en sessionStorage');
+            return;
+        }
+        
+        const busReservation = JSON.parse(busReservationString);
+        console.log('Datos de reserva de autobús encontrados:', busReservation);
+        
+        // Extraer cantidades de personas
+        const adultos = parseInt(busReservation.adultos) || 0;
+        const residentes = parseInt(busReservation.residentes) || 0;
+        const ninos_5_12 = parseInt(busReservation.ninos_5_12) || 0;
+        const ninos_menores = parseInt(busReservation.ninos_menores) || 0;
+        
+        // Calcular totales
+        const totalAdultos = adultos + residentes; // Adultos + Residentes = Adultos para la visita
+        const totalNinos = ninos_5_12;
+        const totalNinosMenores = ninos_menores;
+        
+        console.log('Cantidades calculadas:');
+        console.log('- Adultos (incluye residentes):', totalAdultos);
+        console.log('- Niños (5-12 años):', totalNinos);
+        console.log('- Niños menores (-5 años):', totalNinosMenores);
+        
+        // Establecer valor mínimo de 1 adulto
+        const adultosValue = totalAdultos > 0 ? totalAdultos : 1;
+        
+        // Autorrellenar los campos
+        jQuery('#adultos-visita').val(adultosValue);
+        jQuery('#ninos-visita').val(totalNinos);
+        jQuery('#ninos-menores-visita').val(totalNinosMenores);
+        
+        // Recalcular el precio total
+        calculateTotalPrice();
+        
+        console.log('✅ Campos autorrellenados correctamente');
+        
+    } catch (error) {
+        console.error('Error al autorellenar personas:', error);
+    }
 }
 
 /**
@@ -184,6 +251,7 @@ function processVisitaReservation() {
     // Validar personas
     const adultos = parseInt(jQuery('#adultos-visita').val()) || 0;
     const ninos = parseInt(jQuery('#ninos-visita').val()) || 0;
+    const ninosMenores = parseInt(jQuery('#ninos-menores-visita').val()) || 0; // ✅ NUEVO
     
     if (adultos < 1) {
         alert('Debe haber al menos un adulto en la reserva.');
@@ -205,6 +273,7 @@ function processVisitaReservation() {
         hora: serviceData.hora,
         adultos: adultos,
         ninos: ninos,
+        ninos_menores: ninosMenores, // ✅ NUEVO
         total: total,
         nombre: nombre,
         apellidos: apellidos,
@@ -214,7 +283,7 @@ function processVisitaReservation() {
     
     console.log('Datos a enviar:', reservationData);
     
-    // Deshabilitar botón
+    // Deshabilitar botón y mostrar estado de carga
     const processBtn = jQuery('.complete-btn');
     const originalText = processBtn.text();
     processBtn.prop('disabled', true).text('Procesando...');
@@ -237,6 +306,7 @@ function processVisitaReservation() {
                     hora: serviceData.hora,
                     adultos: adultos,
                     ninos: ninos,
+                    ninos_menores: ninosMenores, // ✅ NUEVO
                     total: total,
                     nombre: nombre,
                     apellidos: apellidos,

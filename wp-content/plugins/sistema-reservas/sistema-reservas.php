@@ -176,8 +176,8 @@ class SistemaReservas
         }
 
         if (class_exists('ReservasAgencyServicesFrontend')) {
-    new ReservasAgencyServicesFrontend();
-}
+            new ReservasAgencyServicesFrontend();
+        }
 
         if (class_exists('ReservasCalendarAdmin')) {
             $this->calendar_admin = new ReservasCalendarAdmin();
@@ -487,8 +487,45 @@ class SistemaReservas
         KEY status (status)
     ) $charset_collate;";
 
+
+
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_servicios);
+
+
+        // Tabla de reservas de visitas guiadas
+        $table_visitas = $wpdb->prefix . 'reservas_visitas';
+        $sql_visitas = "CREATE TABLE $table_visitas (
+    id mediumint(9) NOT NULL AUTO_INCREMENT,
+    localizador varchar(20) NOT NULL UNIQUE,
+    service_id mediumint(9) NOT NULL,
+    agency_id mediumint(9) NOT NULL,
+    fecha date NOT NULL,
+    hora time NOT NULL,
+    nombre varchar(100) NOT NULL,
+    apellidos varchar(100) NOT NULL,
+    email varchar(100) NOT NULL,
+    telefono varchar(20) NOT NULL,
+    adultos int(11) DEFAULT 0,
+    ninos int(11) DEFAULT 0,
+    ninos_menores int(11) DEFAULT 0,
+    total_personas int(11) NOT NULL,
+    precio_total decimal(10,2) NOT NULL,
+    estado enum('pendiente', 'confirmada', 'cancelada') DEFAULT 'confirmada',
+    metodo_pago varchar(50) DEFAULT 'pendiente_tpv',
+    transaction_id varchar(100) NULL,
+    created_at datetime DEFAULT CURRENT_TIMESTAMP,
+    updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY service_id (service_id),
+    KEY agency_id (agency_id),
+    KEY fecha (fecha),
+    KEY estado (estado),
+    KEY localizador (localizador)
+) $charset_collate;";
+
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql_visitas);
 
         // ✅ TABLA DE RESERVAS ACTUALIZADA CON CAMPO DE RECORDATORIO
         $table_reservas = $wpdb->prefix . 'reservas_reservas';
@@ -767,6 +804,24 @@ class SistemaReservas
             array('description' => 'Email remitente para todas las notificaciones del sistema (NO MODIFICAR sin conocimientos técnicos)'),
             array('config_key' => 'email_remitente')
         );
+
+        $table_agency_services = $wpdb->prefix . 'reservas_agency_services';
+
+        $precio_nino_menor_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_agency_services LIKE 'precio_nino_menor'");
+
+        if (empty($precio_nino_menor_exists)) {
+            $wpdb->query("ALTER TABLE $table_agency_services ADD COLUMN precio_nino_menor DECIMAL(10,2) DEFAULT 0.00 AFTER precio_nino");
+            error_log('✅ Columna precio_nino_menor añadida a servicios de agencias');
+        }
+
+        $table_visitas = $wpdb->prefix . 'reservas_visitas';
+
+        $ninos_menores_exists = $wpdb->get_results("SHOW COLUMNS FROM $table_visitas LIKE 'ninos_menores'");
+
+        if (empty($ninos_menores_exists)) {
+            $wpdb->query("ALTER TABLE $table_visitas ADD COLUMN ninos_menores INT(11) DEFAULT 0 AFTER ninos");
+            error_log('✅ Columna ninos_menores añadida a reservas de visitas');
+        }
 
         // ✅ VERIFICAR Y AÑADIR CAMPO email_notificaciones A AGENCIAS
         $table_agencies = $wpdb->prefix . 'reservas_agencies';
@@ -1471,17 +1526,17 @@ function confirmacion_reserva_shortcode()
                 });
         }
 
-function renderAvailableServices(services) {
-    if (!services || services.length === 0) {
-        console.log('No hay servicios para mostrar');
-        return;
-    }
-    
-    // Separar servicio destacado (prioridad 1) del resto
-    const destacado = services.find(s => parseInt(s.orden_prioridad) === 1);
-    const otros = services.filter(s => parseInt(s.orden_prioridad) !== 1);
-    
-    let servicesHtml = `
+        function renderAvailableServices(services) {
+            if (!services || services.length === 0) {
+                console.log('No hay servicios para mostrar');
+                return;
+            }
+
+            // Separar servicio destacado (prioridad 1) del resto
+            const destacado = services.find(s => parseInt(s.orden_prioridad) === 1);
+            const otros = services.filter(s => parseInt(s.orden_prioridad) !== 1);
+
+            let servicesHtml = `
         <div class="additional-services-section container">
             <h2 class="horarios-titulo">¡Haz qué tu Visita Cobre Vida!</h2>
             <p class="services-subtitle">
@@ -1492,10 +1547,10 @@ function renderAvailableServices(services) {
                 <strong>¡Y disfruta de una experiencia 100 % inmersiva!</strong>
             </p>
     `;
-    
-    // Si hay servicio destacado (prioridad 1) - GRANDE ARRIBA
-    if (destacado) {
-        servicesHtml += `
+
+            // Si hay servicio destacado (prioridad 1) - GRANDE ARRIBA
+            if (destacado) {
+                servicesHtml += `
             <div class="service-card service-card-destacado" style="grid-column: 1 / -1; margin-bottom: 30px;" data-service-id="${destacado.id}">
                 ${destacado.portada_url ? `
                     <div class="service-image" style="height: 250px;">
@@ -1516,14 +1571,14 @@ function renderAvailableServices(services) {
                 </div>
             </div>
         `;
-    }
-    
-    // Otros servicios (grid de 3 columnas)
-    if (otros.length > 0) {
-        servicesHtml += `<div class="services-grid">`;
-        
-        otros.forEach(service => {
-            servicesHtml += `
+            }
+
+            // Otros servicios (grid de 3 columnas)
+            if (otros.length > 0) {
+                servicesHtml += `<div class="services-grid">`;
+
+                otros.forEach(service => {
+                    servicesHtml += `
                 <div class="service-card" data-service-id="${service.id}">
                     ${service.portada_url ? `
                         <div class="service-image">
@@ -1544,82 +1599,81 @@ function renderAvailableServices(services) {
                     </div>
                 </div>
             `;
-        });
-        
-        servicesHtml += `</div>`;
-    }
-    
-    servicesHtml += `</div>`;
-    
-    // Guardar los servicios en una variable global para acceder después
-    window.availableServices = services;
-    
-    // Insertar después del contenedor principal
-    const mainContainer = document.querySelector('.confirmacion-container.container');
-    if (mainContainer) {
-        mainContainer.insertAdjacentHTML('afterend', servicesHtml);
-    }
-}
+                });
 
-function selectService(serviceId) {
-    console.log('Servicio seleccionado ID:', serviceId);
-    
-    // Buscar el servicio en el array global
-    const service = window.availableServices.find(s => parseInt(s.id) === parseInt(serviceId));
-    
-    if (!service) {
-        alert('Error: No se encontraron datos del servicio');
-        return;
-    }
-    
-    console.log('Datos del servicio completos:', service);
-    
-    // Preparar datos para guardar en sessionStorage
-    const serviceData = {
-        id: service.id,
-        agency_id: service.agency_id,
-        agency_name: service.agency_name,
-        titulo: service.titulo || service.agency_name,
-        descripcion: service.descripcion || '',
-        portada_url: service.portada_url || '',
-        logo_url: service.logo_url || '',
-        precio_adulto: parseFloat(service.precio_adulto),
-        precio_nino: parseFloat(service.precio_nino),
-        fecha: reservationData.detalles.fecha,
-        hora: reservationData.detalles.hora,
-        email: service.email,
-        phone: service.phone
-    };
-    
-    console.log('Guardando datos en sessionStorage:', serviceData);
-    sessionStorage.setItem('selectedServiceData', JSON.stringify(serviceData));
-    
-    // ✅ CONSTRUIR URL RELATIVA CORRECTAMENTE
-    const currentPath = window.location.pathname;
-    let targetUrl;
-    
-    // Si estamos en un subdirectorio (como /bravobravo2parte/)
-    if (currentPath.includes('/')) {
-        const pathParts = currentPath.split('/').filter(part => part !== '');
-        
-        // Si hay al menos una parte en la ruta (subdirectorio)
-        if (pathParts.length > 0 && pathParts[0] !== 'detalles-reserva-visita') {
-            // Usar el primer segmento como base
-            targetUrl = window.location.origin + '/' + pathParts[0] + '/detalles-reserva-visita/';
-        } else {
-            // Estamos en la raíz
-            targetUrl = window.location.origin + '/detalles-reserva-visita/';
+                servicesHtml += `</div>`;
+            }
+
+            servicesHtml += `</div>`;
+
+            // Guardar los servicios en una variable global para acceder después
+            window.availableServices = services;
+
+            // Insertar después del contenedor principal
+            const mainContainer = document.querySelector('.confirmacion-container.container');
+            if (mainContainer) {
+                mainContainer.insertAdjacentHTML('afterend', servicesHtml);
+            }
         }
-    } else {
-        // Estamos en la raíz
-        targetUrl = window.location.origin + '/detalles-reserva-visita/';
-    }
-    
-    console.log('Redirigiendo a:', targetUrl);
-    
-    // Redirigir a la página de detalles
-    window.location.href = targetUrl;
-}
+
+        function selectService(serviceId) {
+            console.log('Servicio seleccionado ID:', serviceId);
+
+            const service = window.availableServices.find(s => parseInt(s.id) === parseInt(serviceId));
+
+            if (!service) {
+                alert('Error: No se encontraron datos del servicio');
+                return;
+            }
+
+            console.log('Datos del servicio completos:', service);
+
+            const serviceData = {
+                id: service.id,
+                agency_id: service.agency_id,
+                agency_name: service.agency_name,
+                titulo: service.titulo || service.agency_name,
+                descripcion: service.descripcion || '',
+                portada_url: service.portada_url || '',
+                logo_url: service.logo_url || '',
+                precio_adulto: parseFloat(service.precio_adulto),
+                precio_nino: parseFloat(service.precio_nino),
+                precio_nino_menor: parseFloat(service.precio_nino_menor), // ✅ AÑADIR ESTA LÍNEA
+                fecha: reservationData.detalles.fecha,
+                hora: reservationData.detalles.hora,
+                email: service.email,
+                phone: service.phone
+            };
+
+            console.log('Guardando datos en sessionStorage:', serviceData);
+            sessionStorage.setItem('selectedServiceData', JSON.stringify(serviceData));
+
+            // ✅ CONSTRUIR URL RELATIVA CORRECTAMENTE
+            const currentPath = window.location.pathname;
+            let targetUrl;
+
+            // Si estamos en un subdirectorio (como /bravobravo2parte/)
+            if (currentPath.includes('/')) {
+                const pathParts = currentPath.split('/').filter(part => part !== '');
+
+                // Si hay al menos una parte en la ruta (subdirectorio)
+                if (pathParts.length > 0 && pathParts[0] !== 'detalles-reserva-visita') {
+                    // Usar el primer segmento como base
+                    targetUrl = window.location.origin + '/' + pathParts[0] + '/detalles-reserva-visita/';
+                } else {
+                    // Estamos en la raíz
+                    targetUrl = window.location.origin + '/detalles-reserva-visita/';
+                }
+            } else {
+                // Estamos en la raíz
+                targetUrl = window.location.origin + '/detalles-reserva-visita/';
+            }
+
+            console.log('Redirigiendo a:', targetUrl);
+
+            // Redirigir a la página de detalles
+            window.location.href = targetUrl;
+        }
 
         function contactService(email, phone, agencyName) {
             // En lugar de alert, redirigir a la página de detalles
@@ -2955,6 +3009,57 @@ function emergency_create_conductor()
     echo '<p><strong>Contraseña:</strong> <code>conductor</code></p>';
     echo '<p><strong>URL de Login:</strong> <a href="' . home_url('/reservas-login/') . '" target="_blank">' . home_url('/reservas-login/') . '</a></p>';
 
+    exit;
+}
+
+add_action('wp_ajax_force_create_visitas_table', 'force_create_visitas_table');
+add_action('wp_ajax_nopriv_force_create_visitas_table', 'force_create_visitas_table');
+
+function force_create_visitas_table() {
+    global $wpdb;
+    $table_visitas = $wpdb->prefix . 'reservas_visitas';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table_visitas (
+        id mediumint(9) NOT NULL AUTO_INCREMENT,
+        localizador varchar(20) NOT NULL UNIQUE,
+        service_id mediumint(9) NOT NULL,
+        agency_id mediumint(9) NOT NULL,
+        fecha date NOT NULL,
+        hora time NOT NULL,
+        nombre varchar(100) NOT NULL,
+        apellidos varchar(100) NOT NULL,
+        email varchar(100) NOT NULL,
+        telefono varchar(20) NOT NULL,
+        adultos int(11) DEFAULT 0,
+        ninos int(11) DEFAULT 0,
+        ninos_menores int(11) DEFAULT 0,
+        total_personas int(11) NOT NULL,
+        precio_total decimal(10,2) NOT NULL,
+        estado enum('pendiente', 'confirmada', 'cancelada') DEFAULT 'confirmada',
+        metodo_pago varchar(50) DEFAULT 'pendiente_tpv',
+        transaction_id varchar(100) NULL,
+        created_at datetime DEFAULT CURRENT_TIMESTAMP,
+        updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY (id),
+        KEY service_id (service_id),
+        KEY agency_id (agency_id),
+        KEY fecha (fecha),
+        KEY estado (estado),
+        KEY localizador (localizador)
+    ) $charset_collate;";
+
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
+
+    $table_exists = $wpdb->get_var("SHOW TABLES LIKE '$table_visitas'") == $table_visitas;
+    
+    if ($table_exists) {
+        echo '✅ Tabla wp_reservas_visitas creada correctamente';
+    } else {
+        echo '❌ Error: La tabla no se pudo crear. Error: ' . $wpdb->last_error;
+    }
+    
     exit;
 }
 

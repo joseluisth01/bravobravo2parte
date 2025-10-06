@@ -257,8 +257,10 @@ function populateServiceForm(serviceData, isEdit) {
     }
     
     // Precios
-    jQuery('#' + prefix + 'precio_adulto_servicio').val(serviceData.precio_adulto || '');
-    jQuery('#' + prefix + 'precio_nino_servicio').val(serviceData.precio_nino || '');
+    // Precios
+jQuery('#' + prefix + 'precio_adulto_servicio').val(serviceData.precio_adulto || '');
+jQuery('#' + prefix + 'precio_nino_servicio').val(serviceData.precio_nino || '');
+jQuery('#' + prefix + 'precio_nino_menor_servicio').val(serviceData.precio_nino_menor || ''); // ✅ NUEVO
     
     // Descripción
     jQuery('#' + prefix + 'descripcion_servicio').val(serviceData.descripcion || '');

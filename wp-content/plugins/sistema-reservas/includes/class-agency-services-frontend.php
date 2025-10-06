@@ -84,10 +84,9 @@ class ReservasAgencyServicesFrontend
                             </div>
                             <div class="info-row menores">
                                 <span class="label">NIÑOS (-5 AÑOS):</span>
-                                <span class="price">0€</span>
+                                <span class="price" id="precio-nino-menor-info">-€</span>
                             </div>
                         </div>
-
 
                         <div class="info-notes">
                             <img style="width: 30px;" src="https://dev.tictac-comunicacion.es/bravobravo2parte/wp-content/uploads/2025/10/Vector-20.svg" alt="">
@@ -95,7 +94,6 @@ class ReservasAgencyServicesFrontend
                                 <p>*Visita guiada de 3 horas y media aprox.</p>
                                 <p>*Sistema de radioguías para grupos con más de 10 componentes</p>
                             </div>
-
                         </div>
                     </div>
 
@@ -142,6 +140,12 @@ class ReservasAgencyServicesFrontend
                                         <input type="number" id="ninos-visita" min="0" max="999" value="0" class="person-input">
                                     </div>
 
+                                    <!-- ✅ NUEVO INPUT -->
+                                    <div class="person-selector">
+                                        <label>NÚMERO DE NIÑOS (-5 AÑOS):</label>
+                                        <input type="number" id="ninos-menores-visita" min="0" max="999" value="0" class="person-input">
+                                    </div>
+
                                     <div class="total-price-visita">
                                         <div class="total-row">
                                             <span class="label">TOTAL COMPRA:</span>
@@ -150,9 +154,6 @@ class ReservasAgencyServicesFrontend
                                     </div>
                                 </div>
                             </div>
-
-
-
                         </div>
 
                         <!-- Columna derecha: Datos Personales -->
@@ -193,8 +194,6 @@ class ReservasAgencyServicesFrontend
                         </button>
                     </div>
                 </div>
-
-
             </div>
         </div>
     <?php
@@ -208,48 +207,160 @@ class ReservasAgencyServicesFrontend
     {
         ob_start();
     ?>
+        <style>
+            .confirmacion-visita-container {
+                max-width: 800px;
+                margin: 50px auto;
+                padding: 0;
+            }
+
+            .back-btn {
+                color: black;
+                border: none;
+                font-size: 14px;
+                cursor: pointer;
+                text-transform: uppercase;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                background: none !important;
+                margin-bottom: 20px;
+                padding: 0;
+                font-family: 'Duran-Regular';
+                font-weight: 600;
+            }
+
+            .back-btn img {
+                width: 10px;
+            }
+
+            .success-banner {
+                background: #DB7461;
+                color: white;
+                text-align: center;
+                padding: 20px;
+                font-weight: bold;
+                letter-spacing: 2px;
+                border-top-left-radius: 15px;
+                border-top-right-radius: 15px;
+                font-family: 'Duran-Medium';
+                text-transform: uppercase;
+            }
+
+            .content-section {
+                background: #FFFFFF;
+                padding: 50px 60px;
+                text-align: center;
+                border-bottom-left-radius: 15px;
+                border-bottom-right-radius: 15px;
+                box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .todo-listo {
+                font-size: 18px;
+                font-weight: bold;
+                color: #333;
+                margin-bottom: 25px;
+                font-family: 'Duran-Regular';
+            }
+
+            .thank-you-message {
+                margin-bottom: 30px;
+            }
+
+            .thank-you-message p {
+                font-size: 16px;
+                color: #2D2D2D;
+                line-height: 1.8;
+                margin: 0 0 15px 0;
+                font-family: 'Duran-Regular';
+            }
+
+            .thank-you-message p strong {
+                font-family: 'Duran-Medium';
+            }
+
+            .memorable-text {
+                font-size: 16px;
+                color: #2D2D2D;
+                margin: 30px 0;
+                font-family: 'Duran-Regular';
+            }
+
+            .action-buttons {
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                margin-top: 30px;
+                justify-content: space-between;
+            }
+
+            .complete-btn {
+                background: #EFCF4B;
+                border: none;
+                padding: 15px 100px;
+                font-size: 20px;
+                font-weight: bold;
+                color: #2E2D2C;
+                cursor: pointer;
+                transition: all 0.3s;
+                min-width: 44%;
+                font-family: 'Duran-Medium';
+                text-transform: uppercase;
+                border-radius: 10px;
+                letter-spacing: 1px;
+                margin: 0 auto;
+                box-shadow: 0px 2px 4px 0px rgba(0, 0, 0, .8);
+            }
+
+            .complete-btn:hover {
+                transform: translateY(-2px);
+                text-decoration: none;
+                background-color: #efcf4b;
+            }
+
+            @media (max-width: 768px) {
+                .confirmacion-visita-container {
+                    margin: 20px;
+                }
+
+                .content-section {
+                    padding: 40px 30px;
+                }
+
+                .action-buttons {
+                    flex-direction: column;
+                    gap: 15px;
+                }
+
+                .complete-btn {
+                    width: 100%;
+                    padding: 15px 30px;
+                }
+            }
+        </style>
+
         <div class="confirmacion-visita-container container">
-            <button type="button" class="back-btn" onclick="goBackToInicio()">
+            <button type="button" class="back-btn" onclick="goBackInicio()">
                 <img src="https://autobusmedinaazahara.com/wp-content/uploads/2025/07/Vector-15.svg" alt="">
-                VOLVER AL INICIO
+                VOLVER A INICIO
             </button>
 
             <div class="success-banner">
-                <h1>¡RESERVA DE VISITA GUIADA CONFIRMADA!</h1>
+                ¡GRACIAS POR TU COMPRA!
             </div>
 
             <div class="content-section">
+                <div class="todo-listo">
+                    ¡Todo listo!
+                </div>
+
                 <div class="thank-you-message">
-                    <p>Gracias por reservar tu <strong>visita guiada a Medina Azahara</strong>.</p>
-                    <p>Recibirás un email de confirmación con todos los detalles.</p>
+                    <p><strong>Gracias por confiar en Autocares BRAVO y en nuestros guías colaboradores para vivir Medina Azahara al completo.</strong> Ahora solo te queda relajarte, dejarte llevar y disfrutar de cada historia que emergerá entre sus columnas califales.</p>
                 </div>
 
-                <div class="confirmacion-details" id="confirmacion-details">
-                    <h3>DETALLES DE TU RESERVA</h3>
-                    <div class="detail-row">
-                        <span class="label">LOCALIZADOR:</span>
-                        <span class="value" id="conf-localizador">-</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">FECHA:</span>
-                        <span class="value" id="conf-fecha">-</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">HORA:</span>
-                        <span class="value" id="conf-hora">-</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="label">PERSONAS:</span>
-                        <span class="value" id="conf-personas">-</span>
-                    </div>
-                    <div class="detail-row total">
-                        <span class="label">TOTAL PAGADO:</span>
-                        <span class="value" id="conf-total">-</span>
-                    </div>
-                </div>
-
-                <div class="remember-text">
-                    Te esperamos para disfrutar de esta increíble experiencia.
+                <div class="memorable-text">
+                    ¡Que tu recorrido sea tan memorable como la ciudad que vas a descubrir!
                 </div>
 
                 <div class="action-buttons">
@@ -262,6 +373,55 @@ class ReservasAgencyServicesFrontend
                 </div>
             </div>
         </div>
+
+        <script>
+            // Cargar datos de confirmación al cargar la página
+            window.addEventListener('DOMContentLoaded', function() {
+                console.log('=== PÁGINA DE CONFIRMACIÓN DE VISITA CARGADA ===');
+
+                // Obtener localizador de la URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const localizador = urlParams.get('localizador');
+
+                console.log('Localizador desde URL:', localizador);
+
+                if (localizador) {
+                    // Guardar localizador globalmente para los botones
+                    window.visitaLocalizador = localizador;
+                    console.log('✅ Localizador guardado para usar en botones:', localizador);
+                }
+            });
+
+            function goBackInicio() {
+                const currentPath = window.location.pathname;
+                let targetUrl;
+
+                if (currentPath.includes('/')) {
+                    const pathParts = currentPath.split('/').filter(part => part !== '');
+                    if (pathParts.length > 0 && pathParts[0] !== 'confirmacion-reserva-visita') {
+                        targetUrl = window.location.origin + '/' + pathParts[0] + '/';
+                    } else {
+                        targetUrl = window.location.origin + '/';
+                    }
+                } else {
+                    targetUrl = window.location.origin + '/';
+                }
+
+                console.log('Redirigiendo a inicio:', targetUrl);
+                window.location.href = targetUrl;
+            }
+
+            // Funciones placeholder para los botones (se implementarán en el siguiente paso)
+            function viewVisitaTicket() {
+                console.log('Ver comprobante - Localizador:', window.visitaLocalizador);
+                alert('Función "Ver Comprobante" - Se implementará en el siguiente paso');
+            }
+
+            function downloadVisitaTicket() {
+                console.log('Descargar comprobante - Localizador:', window.visitaLocalizador);
+                alert('Función "Descargar Comprobante" - Se implementará en el siguiente paso');
+            }
+        </script>
 <?php
         return ob_get_clean();
     }
@@ -285,6 +445,7 @@ class ReservasAgencyServicesFrontend
             $hora = sanitize_text_field($_POST['hora']);
             $adultos = intval($_POST['adultos']);
             $ninos = intval($_POST['ninos']);
+            $ninos_menores = intval($_POST['ninos_menores']); // ✅ NUEVO
             $nombre = sanitize_text_field($_POST['nombre']);
             $apellidos = sanitize_text_field($_POST['apellidos']);
             $email = sanitize_email($_POST['email']);
@@ -307,9 +468,9 @@ class ReservasAgencyServicesFrontend
 
             $servicio = $wpdb->get_row($wpdb->prepare(
                 "SELECT s.*, a.agency_name, a.email as agency_email
-                 FROM $table_services s
-                 INNER JOIN {$wpdb->prefix}reservas_agencies a ON s.agency_id = a.id
-                 WHERE s.id = %d AND s.servicio_activo = 1",
+             FROM $table_services s
+             INNER JOIN {$wpdb->prefix}reservas_agencies a ON s.agency_id = a.id
+             WHERE s.id = %d AND s.servicio_activo = 1",
                 $service_id
             ));
 
@@ -319,9 +480,10 @@ class ReservasAgencyServicesFrontend
             }
 
             // Calcular precio total
-            $total_personas = $adultos + $ninos;
+            $total_personas = $adultos + $ninos + $ninos_menores; // ✅ MODIFICADO
             $precio_total = ($adultos * floatval($servicio->precio_adulto)) +
-                ($ninos * floatval($servicio->precio_nino));
+                ($ninos * floatval($servicio->precio_nino)) +
+                ($ninos_menores * floatval($servicio->precio_nino_menor)); // ✅ NUEVO
 
             // Generar localizador
             if (!class_exists('ReservasReservas')) {
@@ -329,7 +491,7 @@ class ReservasAgencyServicesFrontend
             }
             $localizador = ReservasReservas::generate_localizador();
 
-            // Crear reserva de visita (tabla temporal o nueva)
+            // Crear reserva de visita
             $table_visitas = $wpdb->prefix . 'reservas_visitas';
 
             $insert_data = array(
@@ -344,6 +506,7 @@ class ReservasAgencyServicesFrontend
                 'telefono' => $telefono,
                 'adultos' => $adultos,
                 'ninos' => $ninos,
+                'ninos_menores' => $ninos_menores, // ✅ NUEVO
                 'total_personas' => $total_personas,
                 'precio_total' => $precio_total,
                 'estado' => 'confirmada',
@@ -359,9 +522,6 @@ class ReservasAgencyServicesFrontend
             }
 
             $reserva_id = $wpdb->insert_id;
-
-            // TODO: Aquí irá la integración con TPV
-            // Por ahora, simplemente confirmamos la reserva
 
             // ✅ CONSTRUIR URL DE REDIRECCIÓN DINÁMICAMENTE
             $current_url = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : home_url();

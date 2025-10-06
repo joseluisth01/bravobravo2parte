@@ -6148,14 +6148,20 @@ function renderCreateAgencyModal() {
                                 <div class="form-group">
                                     <label for="precio_adulto_servicio">Precio Adulto (€) *</label>
                                     <input type="number" name="precio_adulto" id="precio_adulto_servicio" 
-                                           step="0.01" min="0" placeholder="0.00">
-                                    <small>Precio por adulto para este servicio</small>
+                                        step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por adulto (>12 años) para este servicio</small>
                                 </div>
                                 <div class="form-group">
-                                    <label for="precio_nino_servicio">Precio Niño (€) *</label>
+                                    <label for="precio_nino_servicio">Precio Niño 5-12 años (€) *</label>
                                     <input type="number" name="precio_nino" id="precio_nino_servicio" 
-                                           step="0.01" min="0" placeholder="0.00">
-                                    <small>Precio por niño para este servicio</small>
+                                        step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por niño de 5 a 12 años</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="precio_nino_menor_servicio">Precio Niño -5 años (€) *</label>
+                                    <input type="number" name="precio_nino_menor" id="precio_nino_menor_servicio" 
+                                        step="0.01" min="0" placeholder="0.00">
+                                    <small>Precio por niño menor de 5 años</small>
                                 </div>
                             </div>
 
@@ -6388,20 +6394,27 @@ function renderEditAgencyModal() {
 </div>
 
                             <!-- Precios -->
-                            <div class="form-grid">
-                                <div class="form-group">
-                                    <label for="edit_precio_adulto_servicio">Precio Adulto (€) *</label>
-                                    <input type="number" name="precio_adulto" id="edit_precio_adulto_servicio" 
-                                           step="0.01" min="0" placeholder="0.00">
-                                    <small>Precio por adulto para este servicio</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="edit_precio_nino_servicio">Precio Niño (€) *</label>
-                                    <input type="number" name="precio_nino" id="edit_precio_nino_servicio" 
-                                           step="0.01" min="0" placeholder="0.00">
-                                    <small>Precio por niño para este servicio</small>
-                                </div>
-                            </div>
+                            <!-- Precios -->
+<div class="form-grid">
+    <div class="form-group">
+        <label for="edit_precio_adulto_servicio">Precio Adulto (€) *</label>
+        <input type="number" name="precio_adulto" id="edit_precio_adulto_servicio" 
+               step="0.01" min="0" placeholder="0.00">
+        <small>Precio por adulto (>12 años) para este servicio</small>
+    </div>
+    <div class="form-group">
+        <label for="edit_precio_nino_servicio">Precio Niño 5-12 años (€) *</label>
+        <input type="number" name="precio_nino" id="edit_precio_nino_servicio" 
+               step="0.01" min="0" placeholder="0.00">
+        <small>Precio por niño de 5 a 12 años</small>
+    </div>
+    <div class="form-group">
+        <label for="edit_precio_nino_menor_servicio">Precio Niño -5 años (€) *</label>
+        <input type="number" name="precio_nino_menor" id="edit_precio_nino_menor_servicio" 
+               step="0.01" min="0" placeholder="0.00">
+        <small>Precio por niño menor de 5 años</small>
+    </div>
+</div>
 
                             <!-- Título y Descripción -->
 <div class="form-grid">
@@ -7004,8 +7017,9 @@ function saveAgencyServiceAfterCreate(agencyId) {
     });
     
     serviceFormData.append('precio_adulto', jQuery('#precio_adulto_servicio').val());
-    serviceFormData.append('precio_nino', jQuery('#precio_nino_servicio').val());
-    serviceFormData.append('descripcion', jQuery('#descripcion_servicio').val());
+serviceFormData.append('precio_nino', jQuery('#precio_nino_servicio').val());
+serviceFormData.append('precio_nino_menor', jQuery('#precio_nino_menor_servicio').val());
+serviceFormData.append('descripcion', jQuery('#descripcion_servicio').val());
     serviceFormData.append('titulo', jQuery('#titulo_servicio').val());
 serviceFormData.append('orden_prioridad', jQuery('#orden_prioridad').val());
     
@@ -7132,8 +7146,9 @@ function saveAgencyServiceOnEdit(agencyId) {
         }
         
         serviceFormData.append('precio_adulto', precioAdulto);
-        serviceFormData.append('precio_nino', jQuery('#edit_precio_nino_servicio').val());
-        serviceFormData.append('descripcion', jQuery('#edit_descripcion_servicio').val());
+serviceFormData.append('precio_nino', jQuery('#edit_precio_nino_servicio').val());
+serviceFormData.append('precio_nino_menor', jQuery('#edit_precio_nino_menor_servicio').val()); // ✅ NUEVO
+serviceFormData.append('descripcion', jQuery('#edit_descripcion_servicio').val());
         serviceFormData.append('titulo', jQuery('#edit_titulo_servicio').val());
         serviceFormData.append('orden_prioridad', jQuery('#edit_orden_prioridad').val());
         
