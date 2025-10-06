@@ -50,15 +50,10 @@ class ReservasAgencyServicesFrontend
         }
     }
 
-    /**
-     * Renderizar página de detalles de reserva de visita
-     */
     public function render_detalles_visita()
     {
         ob_start();
 ?>
-
-
         <!-- Hero con imagen de portada y título -->
         <div id="service-hero" class="service-hero">
             <img id="hero-image" src="" alt="">
@@ -70,85 +65,136 @@ class ReservasAgencyServicesFrontend
                 <h1 id="service-title" class="service-hero-title"></h1>
             </div>
         </div>
+
         <div class="visita-container container">
-
-
-            <!-- Detalles de la reserva -->
+            <!-- Detalles de compra (precios dinámicos) -->
             <div class="visita-details-section">
-                <h2>DETALLES DE LA RESERVA DE VISITA GUIADA</h2>
+                <h2>DETALLES DE COMPRA DE VISITA GUIADA</h2>
+                <div style="padding:30px 60px;">
 
-                <div class="details-grid">
-                    <!-- Columna izquierda: Fechas y personas -->
-                    <div class="details-column">
-                        <div class="details-card">
-                            <h3>FECHAS Y HORAS</h3>
-                            <div class="detail-row">
-                                <span class="label">FECHA VISITA:</span>
-                                <span class="value" id="fecha-visita">-</span>
+                    <div class="details-info-box">
+                        <div style="background-color:#DB7461; display:flex; align-items:center; justify-content: space-around">
+                            <div class="info-row adultos">
+                                <span class="label">ADULTOS (MAYORES DE 12 AÑOS):</span>
+                                <span class="price" id="precio-adulto-info">-€</span>
                             </div>
-                            <div class="detail-row">
-                                <span class="label">HORA INICIO:</span>
-                                <span class="value" id="hora-inicio">-</span>
+                            <div class="info-row ninos">
+                                <span class="label">NIÑOS (DE 5 A 12 AÑOS):</span>
+                                <span class="price" id="precio-nino-info">-€</span>
+                            </div>
+                            <div class="info-row menores">
+                                <span class="label">NIÑOS (-5 AÑOS):</span>
+                                <span class="price">0€</span>
                             </div>
                         </div>
 
-                        <div class="details-card">
-                            <h3>SELECCIONA LAS PERSONAS</h3>
-                            <div class="person-selector">
-                                <label>ADULTOS</label>
-                                <input type="number" id="adultos-visita" min="1" max="999" value="1" class="person-input">
-                                <span class="price-per-person" id="precio-adulto-display">0€/persona</span>
+
+                        <div class="info-notes">
+                            <img style="width: 30px;" src="https://dev.tictac-comunicacion.es/bravobravo2parte/wp-content/uploads/2025/10/Vector-20.svg" alt="">
+                            <div>
+                                <p>*Visita guiada de 3 horas y media aprox.</p>
+                                <p>*Sistema de radioguías para grupos con más de 10 componentes</p>
                             </div>
 
-                            <div class="person-selector">
-                                <label>NIÑOS (5/12 AÑOS)</label>
-                                <input type="number" id="ninos-visita" min="0" max="999" value="0" class="person-input">
-                                <span class="price-per-person" id="precio-nino-display">0€/persona</span>
-                            </div>
+                        </div>
+                    </div>
 
-                            <div class="total-price-visita">
-                                <div class="total-row">
-                                    <span class="label">TOTAL:</span>
-                                    <span class="value" id="total-visita">0€</span>
+                    <div class="details-grid-visita">
+                        <!-- Columna izquierda: Fechas y Personas -->
+                        <div class="details-column-left">
+                            <div style="width:50%">
+                                <div class="section-title">
+                                    <h3>FECHAS Y HORAS</h3>
                                 </div>
+
+                                <div class="details-card">
+                                    <div class="detail-row">
+                                        <span class="label"><span>FECHA</span> INICIO VISITA GUIADA:</span>
+                                        <span class="value" id="fecha-visita">-</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">HORA INICIO VISITA GUIADA:</span>
+                                        <span class="value" id="hora-inicio">-</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">FECHA FIN VISITA GUIADA:</span>
+                                        <span class="value" id="fecha-fin">-</span>
+                                    </div>
+                                    <div class="detail-row">
+                                        <span class="label">HORA FIN VISITA GUIADA:</span>
+                                        <span class="value" id="hora-fin">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="width:50%">
+                                <div class="section-title">
+                                    <h3>ENTRADAS, PERSONAS Y PRECIO</h3>
+                                </div>
+
+                                <div class="details-card">
+                                    <div class="person-selector">
+                                        <label>NÚMERO DE ADULTOS (>12 AÑOS):</label>
+                                        <input type="number" id="adultos-visita" min="1" max="999" value="1" class="person-input">
+                                    </div>
+
+                                    <div class="person-selector">
+                                        <label>NÚMERO DE NIÑOS (5/12 AÑOS):</label>
+                                        <input type="number" id="ninos-visita" min="0" max="999" value="0" class="person-input">
+                                    </div>
+
+                                    <div class="total-price-visita">
+                                        <div class="total-row">
+                                            <span class="label">TOTAL COMPRA:</span>
+                                            <span class="value" id="total-visita">0,00€</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+
+
+                        </div>
+
+                        <!-- Columna derecha: Datos Personales -->
+                        <div class="details-column-right">
+                            <div class="section-title">
+                                <h3>DATOS PERSONALES</h3>
+                            </div>
+
+                            <div class="details-card">
+                                <form id="visita-personal-data-form">
+                                    <div class="form-group">
+                                        <input type="text" name="nombre" placeholder="NOMBRE" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="text" name="apellidos" placeholder="APELLIDOS" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="email" name="email" placeholder="EMAIL" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <input type="tel" name="telefono" placeholder="MÓVIL O TELÉFONO" required>
+                                    </div>
+
+                                    <div class="privacy-policy-section">
+                                        <label for="privacy-policy-visita">
+                                            <input type="checkbox" id="privacy-policy-visita" name="privacy-policy" required>
+                                            <span>Acepto haber leído y estar conforme con la <a href="https://autobusmedinaazahara.com/politica-de-privacidad/" target="_blank">política de privacidad</a></span>
+                                        </label>
+                                    </div>
+                                </form>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Columna derecha: Datos personales -->
-                    <div class="details-column">
-                        <div class="details-card">
-                            <h3>DATOS PERSONALES</h3>
-                            <form id="visita-personal-data-form">
-                                <div class="form-group">
-                                    <input type="text" name="nombre" placeholder="NOMBRE" required>
-                                </div>
-                                <div class="form-group">
-                                    <input type="text" name="apellidos" placeholder="APELLIDOS" required>
-                                </div>
-                                <div class="form-group">
-                                    <input type="email" name="email" placeholder="EMAIL" required>
-                                </div>
-                                <div class="form-group">
-                                    <input type="tel" name="telefono" placeholder="MÓVIL O TELÉFONO" required>
-                                </div>
-
-                                <div class="privacy-policy-section">
-                                    <label for="privacy-policy-visita">
-                                        <input type="checkbox" id="privacy-policy-visita" name="privacy-policy" required>
-                                        <span>Acepto haber leído y estar conforme con la <a href="https://autobusmedinaazahara.com/politica-de-privacidad/" target="_blank">política de privacidad</a></span>
-                                    </label>
-                                </div>
-                            </form>
-                        </div>
+                    <div class="final-buttons">
+                        <button type="button" class="complete-btn" onclick="processVisitaReservation()">
+                            COMPLETA COMPRA
+                        </button>
                     </div>
                 </div>
 
-                <div class="final-buttons">
-                    <button type="button" class="complete-btn" onclick="processVisitaReservation()">
-                        COMPLETAR RESERVA
-                    </button>
-                </div>
+
             </div>
         </div>
     <?php

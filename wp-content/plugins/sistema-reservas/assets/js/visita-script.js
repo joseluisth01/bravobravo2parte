@@ -56,9 +56,6 @@ function loadServiceData() {
     }
 }
 
-/**
- * Rellenar la página con los datos del servicio
- */
 function populateServicePage() {
     console.log('=== RELLENANDO PÁGINA ===');
     
@@ -66,7 +63,6 @@ function populateServicePage() {
     if (serviceData.portada_url) {
         jQuery('#hero-image').attr('src', serviceData.portada_url);
     } else {
-        // Imagen por defecto si no hay
         jQuery('#hero-image').attr('src', 'https://via.placeholder.com/1200x400?text=Visita+Guiada');
     }
     
@@ -84,14 +80,31 @@ function populateServicePage() {
     jQuery('#fecha-visita').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
     jQuery('#hora-inicio').text(serviceData.hora || '-');
     
-    // Precios por persona
+    // Calcular hora de fin (sumar 3.5 horas)
+    const horaInicio = serviceData.hora.split(':');
+    const fechaFin = new Date(fechaObj);
+    fechaFin.setHours(parseInt(horaInicio[0]) + 3);
+    fechaFin.setMinutes(parseInt(horaInicio[1]) + 30);
+    
+    const horaFin = fechaFin.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    jQuery('#fecha-fin').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
+    jQuery('#hora-fin').text(horaFin);
+    
+    // ✅ PRECIOS DINÁMICOS DESDE EL SERVICIO
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
     
-    jQuery('#precio-adulto-display').text(precioAdulto.toFixed(2) + '€/persona');
-    jQuery('#precio-nino-display').text(precioNino.toFixed(2) + '€/persona');
+    // Mostrar precios en la sección de información
+    jQuery('#precio-adulto-info').text(precioAdulto.toFixed(0) + '€');
+    jQuery('#precio-nino-info').text(precioNino.toFixed(0) + '€');
     
     console.log('✅ Página rellenada correctamente');
+    console.log('Precio adulto:', precioAdulto);
+    console.log('Precio niño:', precioNino);
 }
 
 /**
@@ -106,6 +119,7 @@ function calculateTotalPrice() {
     const adultos = parseInt(jQuery('#adultos-visita').val()) || 0;
     const ninos = parseInt(jQuery('#ninos-visita').val()) || 0;
     
+    // ✅ USAR PRECIOS DINÁMICOS DEL SERVICIO
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
     
