@@ -5,21 +5,21 @@
 
 let serviceData = null;
 
-jQuery(document).ready(function($) {
+jQuery(document).ready(function ($) {
     console.log('=== VISITA SCRIPT INICIALIZADO ===');
-    
+
     // Verificar si estamos en la página de detalles
     if ($('#service-hero').length > 0) {
         loadServiceData();
     }
-    
+
     // Verificar si estamos en la página de confirmación
     if ($('.confirmacion-visita-container').length > 0) {
         loadConfirmationData();
     }
-    
+
     // Event listeners para cálculo de precio
-    $('#adultos-visita, #ninos-visita, #ninos-menores-visita').on('input change', function() { // ✅ AÑADIDO #ninos-menores-visita
+    $('#adultos-visita, #ninos-visita, #ninos-menores-visita').on('input change', function () { // ✅ AÑADIDO #ninos-menores-visita
         calculateTotalPrice();
     });
 });
@@ -29,26 +29,26 @@ jQuery(document).ready(function($) {
  */
 function loadServiceData() {
     console.log('=== CARGANDO DATOS DEL SERVICIO ===');
-    
+
     try {
         const dataString = sessionStorage.getItem('selectedServiceData');
-        
+
         if (!dataString) {
             console.error('No hay datos del servicio en sessionStorage');
             alert('Error: No se encontraron datos del servicio. Por favor, vuelve a seleccionar el servicio.');
             window.history.back();
             return;
         }
-        
+
         serviceData = JSON.parse(dataString);
         console.log('Datos del servicio cargados:', serviceData);
-        
+
         // Rellenar la página con los datos (esto ya incluye el autorelleno)
         populateServicePage();
-        
+
         // Calcular precio inicial
         calculateTotalPrice();
-        
+
     } catch (error) {
         console.error('Error cargando datos del servicio:', error);
         alert('Error cargando los datos del servicio');
@@ -58,16 +58,16 @@ function loadServiceData() {
 
 function populateServicePage() {
     console.log('=== RELLENANDO PÁGINA ===');
-    
+
     // Imagen de portada y título
     if (serviceData.portada_url) {
         jQuery('#hero-image').attr('src', serviceData.portada_url);
     } else {
         jQuery('#hero-image').attr('src', 'https://via.placeholder.com/1200x400?text=Visita+Guiada');
     }
-    
+
     jQuery('#service-title').text(serviceData.titulo || serviceData.agency_name || 'VISITA GUIADA');
-    
+
     // Fecha y hora de la reserva del autobús
     const fechaObj = new Date(serviceData.fecha + 'T00:00:00');
     const fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
@@ -76,44 +76,44 @@ function populateServicePage() {
         month: 'long',
         day: 'numeric'
     });
-    
+
     jQuery('#fecha-visita').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
-    
+
     // Quitar segundos de la hora
     const horaInicio = serviceData.hora.substring(0, 5);
     jQuery('#hora-inicio').text(horaInicio);
-    
+
     // Calcular hora de fin (sumar 3.5 horas)
     const horaInicioArr = serviceData.hora.split(':');
     const fechaFin = new Date(fechaObj);
     fechaFin.setHours(parseInt(horaInicioArr[0]) + 3);
     fechaFin.setMinutes(parseInt(horaInicioArr[1]) + 30);
-    
+
     const horaFin = fechaFin.toLocaleTimeString('es-ES', {
         hour: '2-digit',
         minute: '2-digit'
     });
-    
+
     jQuery('#fecha-fin').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
     jQuery('#hora-fin').text(horaFin);
-    
+
     // Precios dinámicos desde el servicio
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
     const precioNinoMenor = parseFloat(serviceData.precio_nino_menor) || 0;
-    
+
     console.log('Precios cargados del servicio:');
     console.log('- Precio adulto:', precioAdulto);
     console.log('- Precio niño (5-12):', precioNino);
     console.log('- Precio niño menor (<5):', precioNinoMenor);
-    
+
     // Mostrar precios en la sección de información
     jQuery('#precio-adulto-info').text(precioAdulto.toFixed(0) + '€');
     jQuery('#precio-nino-info').text(precioNino.toFixed(0) + '€');
     jQuery('#precio-nino-menor-info').text(precioNinoMenor.toFixed(0) + '€');
-    
+
     console.log('✅ Página rellenada correctamente');
-    
+
     // ✅ LLAMAR AL AUTORELLENO DE PERSONAS
     autoFillPersonasFromBusReservation();
 }
@@ -126,20 +126,20 @@ function calculateTotalPrice() {
         console.log('No hay datos del servicio para calcular precio');
         return;
     }
-    
+
     const adultos = parseInt(jQuery('#adultos-visita').val()) || 0;
     const ninos = parseInt(jQuery('#ninos-visita').val()) || 0;
     const ninosMenores = parseInt(jQuery('#ninos-menores-visita').val()) || 0; // ✅ NUEVO
-    
+
     // ✅ USAR PRECIOS DINÁMICOS DEL SERVICIO
     const precioAdulto = parseFloat(serviceData.precio_adulto) || 0;
     const precioNino = parseFloat(serviceData.precio_nino) || 0;
     const precioNinoMenor = parseFloat(serviceData.precio_nino_menor) || 0; // ✅ NUEVO
-    
+
     const total = (adultos * precioAdulto) + (ninos * precioNino) + (ninosMenores * precioNinoMenor); // ✅ MODIFICADO
-    
+
     jQuery('#total-visita').text(total.toFixed(2) + '€');
-    
+
     console.log('💰 Precio calculado:', {
         adultos: adultos,
         ninos: ninos,
@@ -156,48 +156,48 @@ function calculateTotalPrice() {
  */
 function autoFillPersonasFromBusReservation() {
     console.log('=== INTENTANDO AUTORELLENAR PERSONAS DESDE RESERVA DE AUTOBÚS ===');
-    
+
     try {
         // Intentar obtener datos de la reserva del autobús
         const busReservationString = sessionStorage.getItem('reservationData');
-        
+
         if (!busReservationString) {
             console.log('No hay datos de reserva de autobús en sessionStorage');
             return;
         }
-        
+
         const busReservation = JSON.parse(busReservationString);
         console.log('Datos de reserva de autobús encontrados:', busReservation);
-        
+
         // Extraer cantidades de personas
         const adultos = parseInt(busReservation.adultos) || 0;
         const residentes = parseInt(busReservation.residentes) || 0;
         const ninos_5_12 = parseInt(busReservation.ninos_5_12) || 0;
         const ninos_menores = parseInt(busReservation.ninos_menores) || 0;
-        
+
         // Calcular totales
         const totalAdultos = adultos + residentes; // Adultos + Residentes = Adultos para la visita
         const totalNinos = ninos_5_12;
         const totalNinosMenores = ninos_menores;
-        
+
         console.log('Cantidades calculadas:');
         console.log('- Adultos (incluye residentes):', totalAdultos);
         console.log('- Niños (5-12 años):', totalNinos);
         console.log('- Niños menores (-5 años):', totalNinosMenores);
-        
+
         // Establecer valor mínimo de 1 adulto
         const adultosValue = totalAdultos > 0 ? totalAdultos : 1;
-        
+
         // Autorrellenar los campos
         jQuery('#adultos-visita').val(adultosValue);
         jQuery('#ninos-visita').val(totalNinos);
         jQuery('#ninos-menores-visita').val(totalNinosMenores);
-        
+
         // Recalcular el precio total
         calculateTotalPrice();
-        
+
         console.log('✅ Campos autorrellenados correctamente');
-        
+
     } catch (error) {
         console.error('Error al autorellenar personas:', error);
     }
@@ -208,7 +208,7 @@ function autoFillPersonasFromBusReservation() {
  */
 function processVisitaReservation() {
     console.log('=== PROCESANDO RESERVA DE VISITA ===');
-    
+
     // Validar política de privacidad
     const privacyCheckbox = document.getElementById('privacy-policy-visita');
     if (!privacyCheckbox || !privacyCheckbox.checked) {
@@ -216,53 +216,53 @@ function processVisitaReservation() {
         if (privacyCheckbox) privacyCheckbox.focus();
         return;
     }
-    
+
     // Validar datos personales
     const nombre = jQuery('[name="nombre"]').val().trim();
     const apellidos = jQuery('[name="apellidos"]').val().trim();
     const email = jQuery('[name="email"]').val().trim();
     const telefono = jQuery('[name="telefono"]').val().trim();
-    
+
     if (!nombre || nombre.length < 2) {
         alert('Por favor, introduce un nombre válido (mínimo 2 caracteres).');
         jQuery('[name="nombre"]').focus();
         return;
     }
-    
+
     if (!apellidos || apellidos.length < 2) {
         alert('Por favor, introduce apellidos válidos (mínimo 2 caracteres).');
         jQuery('[name="apellidos"]').focus();
         return;
     }
-    
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email || !emailRegex.test(email)) {
         alert('Por favor, introduce un email válido.');
         jQuery('[name="email"]').focus();
         return;
     }
-    
+
     if (!telefono || telefono.length < 9) {
         alert('Por favor, introduce un teléfono válido (mínimo 9 dígitos).');
         jQuery('[name="telefono"]').focus();
         return;
     }
-    
+
     // Validar personas
     const adultos = parseInt(jQuery('#adultos-visita').val()) || 0;
     const ninos = parseInt(jQuery('#ninos-visita').val()) || 0;
     const ninosMenores = parseInt(jQuery('#ninos-menores-visita').val()) || 0; // ✅ NUEVO
-    
+
     if (adultos < 1) {
         alert('Debe haber al menos un adulto en la reserva.');
         jQuery('#adultos-visita').focus();
         return;
     }
-    
+
     // Obtener total
     const totalText = jQuery('#total-visita').text();
     const total = parseFloat(totalText.replace('€', '').trim());
-    
+
     // Preparar datos para enviar
     const reservationData = {
         action: 'process_visita_reservation',
@@ -280,25 +280,25 @@ function processVisitaReservation() {
         email: email,
         telefono: telefono
     };
-    
+
     console.log('Datos a enviar:', reservationData);
-    
+
     // Deshabilitar botón y mostrar estado de carga
     const processBtn = jQuery('.complete-btn');
     const originalText = processBtn.text();
     processBtn.prop('disabled', true).text('Procesando...');
-    
+
     // Enviar solicitud AJAX
     jQuery.ajax({
         url: reservasVisitaAjax.ajax_url,
         type: 'POST',
         data: reservationData,
-        success: function(response) {
+        success: function (response) {
             console.log('Respuesta del servidor:', response);
-            
+
             if (response.success) {
                 console.log('✅ Reserva procesada correctamente');
-                
+
                 // Guardar datos para la página de confirmación
                 sessionStorage.setItem('visitaConfirmationData', JSON.stringify({
                     localizador: response.data.localizador,
@@ -312,7 +312,7 @@ function processVisitaReservation() {
                     apellidos: apellidos,
                     email: email
                 }));
-                
+
                 // Redirigir a página de confirmación
                 window.location.href = response.data.redirect_url;
             } else {
@@ -321,7 +321,7 @@ function processVisitaReservation() {
                 processBtn.prop('disabled', false).text(originalText);
             }
         },
-        error: function(xhr, status, error) {
+        error: function (xhr, status, error) {
             console.error('❌ Error AJAX:', error);
             console.error('Response:', xhr.responseText);
             alert('Error de conexión al procesar la reserva. Por favor, inténtalo de nuevo.');
@@ -335,21 +335,21 @@ function processVisitaReservation() {
  */
 function loadConfirmationData() {
     console.log('=== CARGANDO DATOS DE CONFIRMACIÓN ===');
-    
+
     try {
         const dataString = sessionStorage.getItem('visitaConfirmationData');
-        
+
         if (!dataString) {
             console.error('No hay datos de confirmación en sessionStorage');
             return;
         }
-        
+
         const data = JSON.parse(dataString);
         console.log('Datos de confirmación cargados:', data);
-        
+
         // Rellenar datos
         jQuery('#conf-localizador').text(data.localizador || '-');
-        
+
         // Formatear fecha
         const fechaObj = new Date(data.fecha + 'T00:00:00');
         const fechaFormateada = fechaObj.toLocaleDateString('es-ES', {
@@ -359,20 +359,20 @@ function loadConfirmationData() {
             day: 'numeric'
         });
         jQuery('#conf-fecha').text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1));
-        
+
         jQuery('#conf-hora').text(data.hora || '-');
-        
+
         const totalPersonas = (data.adultos || 0) + (data.ninos || 0);
         jQuery('#conf-personas').text(totalPersonas + ' persona' + (totalPersonas !== 1 ? 's' : ''));
-        
+
         jQuery('#conf-total').text((data.total || 0).toFixed(2) + '€');
-        
+
         // Limpiar sessionStorage
         sessionStorage.removeItem('visitaConfirmationData');
         sessionStorage.removeItem('selectedServiceData');
-        
+
         console.log('✅ Datos de confirmación cargados correctamente');
-        
+
     } catch (error) {
         console.error('Error cargando datos de confirmación:', error);
     }
@@ -383,15 +383,15 @@ function loadConfirmationData() {
  */
 function goBackToServices() {
     sessionStorage.removeItem('selectedServiceData');
-    
+
     // ✅ CONSTRUIR URL RELATIVA CORRECTAMENTE
     const currentPath = window.location.pathname;
     let targetUrl;
-    
+
     // Si estamos en un subdirectorio
     if (currentPath.includes('/')) {
         const pathParts = currentPath.split('/').filter(part => part !== '');
-        
+
         // Si hay al menos una parte en la ruta (subdirectorio)
         if (pathParts.length > 0 && pathParts[0] !== 'confirmacion-reserva') {
             // Usar el primer segmento como base
@@ -404,7 +404,7 @@ function goBackToServices() {
         // Estamos en la raíz
         targetUrl = window.location.origin + '/confirmacion-reserva/';
     }
-    
+
     console.log('Volviendo a:', targetUrl);
     window.location.href = targetUrl;
 }
@@ -416,11 +416,11 @@ function goBackToInicio() {
     // ✅ CONSTRUIR URL DE INICIO CORRECTAMENTE
     const currentPath = window.location.pathname;
     let targetUrl;
-    
+
     // Si estamos en un subdirectorio
     if (currentPath.includes('/')) {
         const pathParts = currentPath.split('/').filter(part => part !== '');
-        
+
         // Si hay al menos una parte en la ruta (subdirectorio)
         if (pathParts.length > 0) {
             // Usar el primer segmento como base
@@ -433,7 +433,7 @@ function goBackToInicio() {
         // Estamos en la raíz
         targetUrl = window.location.origin + '/';
     }
-    
+
     console.log('Volviendo al inicio:', targetUrl);
     window.location.href = targetUrl;
 }
@@ -450,4 +450,182 @@ function viewVisitaTicket() {
  */
 function downloadVisitaTicket() {
     alert('La función de descarga de comprobantes estará disponible próximamente.');
+}
+
+
+// Añadir al final del archivo, reemplazando las funciones placeholder
+
+/**
+ * ✅ VER COMPROBANTE DE VISITA
+ */
+function viewVisitaTicket() {
+    console.log('🎫 Solicitando ver comprobante de visita');
+    
+    const localizador = window.visitaLocalizador;
+    
+    if (!localizador) {
+        alert('No se encontró el localizador de la visita. Por favor, revisa tu email.');
+        return;
+    }
+    
+    showLoadingModal('Generando comprobante de visita...');
+    generateAndViewVisitaPDF(localizador);
+}
+
+/**
+ * ✅ DESCARGAR COMPROBANTE DE VISITA
+ */
+function downloadVisitaTicket() {
+    console.log('⬇️ Solicitando descargar comprobante de visita');
+    
+    const localizador = window.visitaLocalizador;
+    
+    if (!localizador) {
+        alert('No se encontró el localizador de la visita. Por favor, revisa tu email.');
+        return;
+    }
+    
+    showLoadingModal('Preparando descarga...');
+    generateAndDownloadVisitaPDF(localizador);
+}
+
+/**
+ * ✅ GENERAR Y VISUALIZAR PDF DE VISITA
+ */
+function generateAndViewVisitaPDF(localizador) {
+    console.log('📋 Generando PDF de visita para visualización...');
+    console.log('🔍 Localizador:', localizador);
+    
+    jQuery.ajax({
+        url: reservasVisitaAjax.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'generate_visita_pdf_view',
+            localizador: localizador,
+            nonce: reservasVisitaAjax.nonce
+        },
+        success: function(response) {
+            console.log('📡 Respuesta:', response);
+            hideLoadingModal();
+            
+            if (response.success && response.data.pdf_url) {
+                console.log('✅ PDF URL recibida:', response.data.pdf_url);
+                console.log('📁 Archivo existe:', response.data.file_exists);
+                console.log('📏 Tamaño:', response.data.file_size);
+                
+                // Abrir PDF en nueva ventana
+                window.open(response.data.pdf_url, '_blank');
+            } else {
+                console.error('❌ Error en respuesta:', response);
+                alert('Error generando el comprobante: ' + (response.data || 'Error desconocido'));
+            }
+        },
+        error: function(xhr, status, error) {
+            hideLoadingModal();
+            console.error('❌ Error AJAX:', error);
+            console.error('Response:', xhr.responseText);
+            alert('Error de conexión al generar el comprobante');
+        }
+    });
+}
+
+/**
+ * ✅ GENERAR Y DESCARGAR PDF DE VISITA
+ */
+function generateAndDownloadVisitaPDF(localizador) {
+    console.log('⬇️ Generando PDF de visita para descarga...');
+    console.log('🔍 Localizador:', localizador);
+    
+    jQuery.ajax({
+        url: reservasVisitaAjax.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'generate_visita_pdf_download',
+            localizador: localizador,
+            nonce: reservasVisitaAjax.nonce
+        },
+        success: function(response) {
+            console.log('📡 Respuesta:', response);
+            hideLoadingModal();
+            
+            if (response.success && response.data.pdf_url) {
+                console.log('✅ PDF URL recibida:', response.data.pdf_url);
+                console.log('📁 Archivo existe:', response.data.file_exists);
+                console.log('📏 Tamaño:', response.data.file_size);
+                
+                // Crear enlace de descarga
+                const link = document.createElement('a');
+                link.href = response.data.pdf_url;
+                link.download = `billete_visita_${localizador}.pdf`;
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('✅ Descarga iniciada');
+            } else {
+                console.error('❌ Error en respuesta:', response);
+                alert('Error preparando la descarga: ' + (response.data || 'Error desconocido'));
+            }
+        },
+        error: function(xhr, status, error) {
+            hideLoadingModal();
+            console.error('❌ Error AJAX:', error);
+            console.error('Response:', xhr.responseText);
+            alert('Error de conexión al preparar la descarga');
+        }
+    });
+}
+
+/**
+ * ✅ MOSTRAR MODAL DE CARGA
+ */
+function showLoadingModal(message) {
+    let modal = document.getElementById('loading-modal-visita');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'loading-modal-visita';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
+        
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 300px;
+        `;
+        
+        content.innerHTML = `
+            <div style="font-size: 24px; margin-bottom: 15px;">⏳</div>
+            <div id="loading-message-visita" style="font-size: 16px; color: #333;">${message}</div>
+        `;
+        
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+    } else {
+        document.getElementById('loading-message-visita').textContent = message;
+        modal.style.display = 'flex';
+    }
+}
+
+/**
+ * ✅ OCULTAR MODAL DE CARGA
+ */
+function hideLoadingModal() {
+    const modal = document.getElementById('loading-modal-visita');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
