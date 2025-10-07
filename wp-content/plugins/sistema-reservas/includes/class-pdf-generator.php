@@ -529,7 +529,7 @@ class ReservasPDFGenerator
     }
 
     /**
-     * Sección de condiciones de compra - sin cambios
+     * Sección de condiciones de compra - CORREGIDO PARA VISITAS
      */
     private function generate_conditions_section($pdf, $is_visita = false)
     {
@@ -550,30 +550,34 @@ class ReservasPDFGenerator
         $pdf->SetXY(15, $y_start + 7);
         $pdf->MultiCell(180, 3, $conditions_text, 1, 'J');
 
+        // ✅ AJUSTAR ESPACIADO PARA EVITAR SUPERPOSICIÓN
+        $y_after_conditions = $pdf->GetY() + 5; // Espacio después de las condiciones
+
         $pdf->SetFont('helvetica', 'B', 7);
-        $pdf->SetXY(15, $y_start + 30);
+        $pdf->SetXY(15, $y_after_conditions);
         $pdf->Cell(0, 3, 'Mantenga la integridad de toda la hoja, sin cortar ninguna de las zonas impresas.', 0, 1, 'C');
 
-        // ✅ IMAGEN ESPECÍFICA
-        $this->add_bottom_image($pdf, $y_start + 35, $is_visita);
+        // ✅ IMAGEN ESPECÍFICA CON MÁS ESPACIO
+        $this->add_bottom_image($pdf, $y_after_conditions + 5, $is_visita);
     }
 
-    /**
- * ✅ FUNCIÓN MEJORADA PARA AÑADIR IMAGEN - AHORA CON SOPORTE PARA LOGO DE AGENCIA
- */
-private function add_bottom_image($pdf, $y_position)
+    private function add_bottom_image($pdf, $y_position)
 {
     // ✅ DETECTAR SI ES UN BILLETE DE VISITA GUIADA
     $is_visita = isset($this->reserva_data['is_visita']) && $this->reserva_data['is_visita'] === true;
     
     if ($is_visita && !empty($this->reserva_data['agency_logo_url'])) {
-        // ✅ USAR LOGO DE LA AGENCIA PARA VISITAS GUIADAS
+        // ✅ USAR LOGO DE LA AGENCIA PARA VISITAS GUIADAS (TAMAÑO REDUCIDO)
         $image_url = $this->reserva_data['agency_logo_url'];
         error_log('📸 Usando logo de agencia para visita: ' . $image_url);
+        $max_width = 80; // ✅ REDUCIDO DE 180 A 80
+        $max_height = 60; // ✅ REDUCIDO PARA MANTENER PROPORCIÓN
     } else {
         // ✅ USAR IMAGEN POR DEFECTO PARA BILLETES DE BUS
         $image_url = 'https://autobusmedinaazahara.com/wp-content/uploads/2025/08/Vector-10-1.png';
         error_log('📸 Usando imagen por defecto de bus');
+        $max_width = 180;
+        $max_height = 60;
     }
 
     try {
@@ -610,9 +614,15 @@ private function add_bottom_image($pdf, $y_position)
         $original_width = $image_info[0];
         $original_height = $image_info[1];
 
-        // Calcular dimensiones para el PDF
-        $pdf_width = 180; // Ancho disponible
+        // ✅ CALCULAR DIMENSIONES PARA EL PDF CON LÍMITES MÁXIMOS
+        $pdf_width = $max_width;
         $pdf_height = ($original_height * $pdf_width) / $original_width;
+
+        // Si la altura excede el máximo, recalcular basándose en altura
+        if ($pdf_height > $max_height) {
+            $pdf_height = $max_height;
+            $pdf_width = ($original_width * $pdf_height) / $original_height;
+        }
 
         // Verificar que no se salga de la página
         $available_height = 297 - $y_position - 10;
@@ -622,7 +632,7 @@ private function add_bottom_image($pdf, $y_position)
             $pdf_width = ($original_width * $pdf_height) / $original_height;
         }
 
-        // Centrar la imagen horizontalmente
+        // ✅ CENTRAR LA IMAGEN HORIZONTALMENTE
         $x_position = 15 + (180 - $pdf_width) / 2;
 
         // Insertar imagen en el PDF
@@ -631,7 +641,7 @@ private function add_bottom_image($pdf, $y_position)
         // Limpiar archivo temporal
         @unlink($temp_image);
 
-        error_log('✅ Imagen añadida al PDF correctamente');
+        error_log('✅ Imagen añadida al PDF correctamente (ancho: ' . $pdf_width . ', alto: ' . $pdf_height . ')');
     } catch (Exception $e) {
         error_log('❌ Error añadiendo imagen al PDF: ' . $e->getMessage());
 
@@ -761,7 +771,4 @@ private function add_bottom_image($pdf, $y_position)
         return isset($this->reserva_data['precio_residente']) ?
             floatval($this->reserva_data['precio_residente']) : 5.00;
     }
-
-
-
 }
