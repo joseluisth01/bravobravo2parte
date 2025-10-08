@@ -550,13 +550,13 @@ class ReservasAgencyServicesFrontend
 
             // ✅ OBTENER DATOS COMPLETOS DEL SERVICIO Y LA AGENCIA
             $servicio = $wpdb->get_row($wpdb->prepare(
-                "SELECT s.*, a.agency_name, a.email as agency_email, a.inicial_localizador
-             FROM $table_services s
-             INNER JOIN {$wpdb->prefix}reservas_agencies a ON s.agency_id = a.id
-             WHERE s.id = %d AND s.servicio_activo = 1",
+                "SELECT s.*, a.agency_name, a.email as agency_email, a.inicial_localizador,
+     a.cif, a.razon_social, a.domicilio_fiscal, a.phone, a.contact_person
+     FROM $table_services s
+     INNER JOIN {$wpdb->prefix}reservas_agencies a ON s.agency_id = a.id
+     WHERE s.id = %d AND s.servicio_activo = 1",
                 $service_id
             ));
-
             if (!$servicio) {
                 wp_send_json_error('Servicio no encontrado');
                 return;
@@ -596,7 +596,6 @@ class ReservasAgencyServicesFrontend
 
             $reserva_id = $wpdb->insert_id;
 
-            // ✅ PREPARAR DATOS PARA EMAIL CON LOGO DE AGENCIA
             $reserva_completa = array_merge($insert_data, array(
                 'id' => $reserva_id,
                 'precio_adulto' => $servicio->precio_adulto,
@@ -604,7 +603,13 @@ class ReservasAgencyServicesFrontend
                 'precio_nino_menor' => $servicio->precio_nino_menor,
                 'agency_name' => $servicio->agency_name,
                 'is_visita' => true, // ✅ MARCADOR PARA IDENTIFICAR VISITA
-                'agency_logo_url' => $servicio->logo_url // ✅ LOGO DE LA AGENCIA
+                'agency_logo_url' => $servicio->logo_url, // ✅ LOGO DE LA AGENCIA
+                // ✅ AÑADIR DATOS FISCALES DE LA AGENCIA
+                'agency_cif' => $servicio->cif ?? '',
+                'agency_razon_social' => $servicio->razon_social ?? '',
+                'agency_domicilio_fiscal' => $servicio->domicilio_fiscal ?? '',
+                'agency_email' => $servicio->agency_email ?? '',
+                'agency_phone' => $servicio->phone ?? ''
             ));
 
             // ✅ ENVIAR EMAIL DE CONFIRMACIÓN

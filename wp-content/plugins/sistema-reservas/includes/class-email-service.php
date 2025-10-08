@@ -381,26 +381,38 @@ public static function send_reminder_email($reserva_data)
         );
     }
 
-    private static function build_customer_email_template($reserva)
-    {
-        $fecha_formateada = date('d/m/Y', strtotime($reserva['fecha']));
-        $fecha_creacion = date('d/m/Y H:i', strtotime($reserva['created_at'] ?? 'now'));
+private static function build_customer_email_template($reserva)
+{
+    $fecha_formateada = date('d/m/Y', strtotime($reserva['fecha']));
+    $fecha_creacion = date('d/m/Y H:i', strtotime($reserva['created_at'] ?? 'now'));
 
-        $personas_detalle = "";
-        if ($reserva['adultos'] > 0) $personas_detalle .= "Adultos: " . $reserva['adultos'] . "<br>";
-        if ($reserva['residentes'] > 0) $personas_detalle .= "Residentes: " . $reserva['residentes'] . "<br>";
-        if ($reserva['ninos_5_12'] > 0) $personas_detalle .= "Niños (5-12 años): " . $reserva['ninos_5_12'] . "<br>";
-        if ($reserva['ninos_menores'] > 0) $personas_detalle .= "Niños menores (gratis): " . $reserva['ninos_menores'] . "<br>";
+    // ✅ DETECTAR SI ES VISITA GUIADA
+    $is_visita = isset($reserva['is_visita']) && $reserva['is_visita'] === true;
 
-        $descuento_info = "";
-        if ($reserva['descuento_total'] > 0) {
-            $descuento_info = "<tr>
+    $personas_detalle = "";
+    if ($reserva['adultos'] > 0) $personas_detalle .= "Adultos: " . $reserva['adultos'] . "<br>";
+    if ($reserva['residentes'] > 0) $personas_detalle .= "Residentes: " . $reserva['residentes'] . "<br>";
+    if ($reserva['ninos_5_12'] > 0) $personas_detalle .= "Niños (5-12 años): " . $reserva['ninos_5_12'] . "<br>";
+    if ($reserva['ninos_menores'] > 0) $personas_detalle .= "Niños menores (gratis): " . $reserva['ninos_menores'] . "<br>";
+
+    $descuento_info = "";
+    if ($reserva['descuento_total'] > 0) {
+        $descuento_info = "<tr>
         <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; background: #FFF8DC; font-weight: 600; color: #871727;'>Descuentos aplicados:</td>
         <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; background: #FFF8DC; text-align: right; color: #871727; font-weight: bold; font-size: 16px;'>-" . number_format($reserva['descuento_total'], 2) . "€</td>
     </tr>";
-        }
+    }
 
-        return "
+    // ✅ DEFINIR NOMBRE DEL PRODUCTO SEGÚN TIPO
+    if ($is_visita) {
+        $producto_nombre = 'Visita Guiada Medina Azahara';
+        $producto_detalle = 'Visita Guiada Medina Azahara (' . substr($reserva['hora'], 0, 5) . ' hrs)';
+    } else {
+        $producto_nombre = 'TAQ BUS Madinat Al-Zahra + Lanzadera';
+        $producto_detalle = 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($reserva['hora'], 0, 5) . ' hrs)';
+    }
+
+    return "
 <!DOCTYPE html>
 <html>
 <head>
@@ -416,7 +428,7 @@ public static function send_reminder_email($reserva_data)
     <div style='background: linear-gradient(135deg, #871727 0%, #A91D33 100%); color: #FFFFFF; text-align: center; padding: 50px 30px;'>
         <h1 style='margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;'>RESERVA CONFIRMADA</h1>
         <div style='width: 60px; height: 3px; background: #EFCF4B; margin: 20px auto; border-radius: 2px;'></div>
-        <p style='margin: 0; font-size: 18px; font-weight: 500; opacity: 0.95;'>Tu viaje a Medina Azahara está asegurado</p>
+        <p style='margin: 0; font-size: 18px; font-weight: 500; opacity: 0.95;'>Tu " . ($is_visita ? 'visita guiada' : 'viaje') . " a Medina Azahara está asegurado</p>
     </div>
 
     <!-- Contenido principal -->
@@ -426,7 +438,7 @@ public static function send_reminder_email($reserva_data)
         <div style='background: #EFCF4B; padding: 30px; text-align: center; border-bottom: 1px solid #E0E0E0;'>
             <h2 style='margin: 0 0 10px 0; font-size: 16px; font-weight: 600; color: #2D2D2D; text-transform: uppercase; letter-spacing: 1px;'>LOCALIZADOR DE RESERVA</h2>
             <div style='font-size: 28px; font-weight: 700; color: #871727; letter-spacing: 3px; font-family: monospace; margin: 10px 0;'>" . $reserva['localizador'] . "</div>
-            <p style='margin: 0; font-size: 14px; color: #2D2D2D; font-weight: 500;'>Presenta este código al subir al autobús</p>
+            <p style='margin: 0; font-size: 14px; color: #2D2D2D; font-weight: 500;'>Presenta este código al " . ($is_visita ? 'iniciar la visita' : 'subir al autobús') . "</p>
         </div>
 
         <!-- Información de la reserva -->
@@ -435,17 +447,26 @@ public static function send_reminder_email($reserva_data)
             
             <table style='width: 100%; border-collapse: collapse; background: #FFFFFF; border: 2px solid #EFCF4B; border-radius: 8px; overflow: hidden;'>
                 <tr>
-                    <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Fecha del viaje:</td>
+                    <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Fecha " . ($is_visita ? 'de la visita' : 'del viaje') . ":</td>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; text-align: right; font-weight: 700; color: #871727;'>" . $fecha_formateada . "</td>
                 </tr>
                 <tr>
-                    <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Hora de salida:</td>
+                    <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Hora de " . ($is_visita ? 'inicio' : 'salida') . ":</td>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; text-align: right; font-weight: 700; color: #871727; font-size: 18px;'>" . substr($reserva['hora'], 0, 5) . "</td>
-                </tr>
+                </tr>";
+    
+    // ✅ HORA DE VUELTA - SOLO PARA AUTOBÚS
+    if (!$is_visita) {
+        $return_html = "
                 <tr>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Hora de vuelta:</td>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; text-align: right; font-weight: 700; color: #871727;'>" . substr($reserva['hora_vuelta'] ?? '', 0, 5) . "</td>
-                </tr>
+                </tr>";
+    } else {
+        $return_html = "";
+    }
+    
+    $html_content = $return_html . "
                 <tr>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; font-weight: 600; color: #2D2D2D;'>Fecha de reserva:</td>
                     <td style='padding: 15px 25px; border-bottom: 1px solid #E0E0E0; text-align: right; color: #666666;'>" . $fecha_creacion . "</td>
@@ -501,10 +522,21 @@ public static function send_reminder_email($reserva_data)
             
             <div style='background: #F8F9FA; padding: 30px; border-radius: 8px; border-left: 4px solid #EFCF4B;'>
                 <ul style='margin: 0; padding-left: 25px; color: #2D2D2D; line-height: 1.8; font-size: 16px;'>
-                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Presenta tu localizador:</strong> <span style='background: #EFCF4B; color: #2D2D2D; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-family: monospace;'>" . $reserva['localizador'] . "</span> al subir al autobús</li>
-                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Puntualidad:</strong> Preséntate 15 minutos antes de la hora de salida</li>
+                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Presenta tu localizador:</strong> <span style='background: #EFCF4B; color: #2D2D2D; padding: 3px 8px; border-radius: 4px; font-weight: 700; font-family: monospace;'>" . $reserva['localizador'] . "</span> al " . ($is_visita ? 'iniciar la visita' : 'subir al autobús') . "</li>
+                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Puntualidad:</strong> Preséntate 15 minutos antes de la hora de " . ($is_visita ? 'inicio' : 'salida') . "</li>";
+    
+    // ✅ INFORMACIÓN ESPECÍFICA SEGÚN TIPO
+    if (!$is_visita) {
+        $html_content .= "
                     <li style='margin: 12px 0;'><strong style='color: #871727;'>Residentes:</strong> Deben presentar documento acreditativo de residencia en Córdoba</li>
-                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Niños menores:</strong> Los menores de 5 años viajan gratis sin ocupar plaza</li>
+                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Niños menores:</strong> Los menores de 5 años viajan gratis sin ocupar plaza</li>";
+    } else {
+        $html_content .= "
+                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Duración:</strong> Aproximadamente 3 horas y media</li>
+                    <li style='margin: 12px 0;'><strong style='color: #871727;'>Niños menores:</strong> Los menores de 5 años no pagan entrada</li>";
+    }
+    
+    $html_content .= "
                     <li style='margin: 12px 0;'><strong style='color: #871727;'>Contacto:</strong> Para cualquier consulta, contacta con nosotros</li>
                 </ul>
             </div>
@@ -512,7 +544,7 @@ public static function send_reminder_email($reserva_data)
             <!-- Mensaje final -->
             <div style='text-align: center; margin-top: 40px; padding: 30px; background: #871727; border-radius: 8px;'>
                 <p style='margin: 0; color: #FFFFFF; font-size: 20px; font-weight: 700;'>
-                    ¡Disfruta de tu visita a Medina Azahara!
+                    ¡Disfruta de tu " . ($is_visita ? 'visita guiada a' : 'viaje a') . " Medina Azahara!
                 </p>
             </div>
         </div>
@@ -532,7 +564,9 @@ public static function send_reminder_email($reserva_data)
 
 </body>
 </html>";
-    }
+
+    return $html_content;
+}
 
     private static function build_reminder_email_template($reserva)
     {

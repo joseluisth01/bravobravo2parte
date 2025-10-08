@@ -249,6 +249,9 @@ class ReservasPDFGenerator
     {
         $y_start = 15;
 
+        // ✅ DETECTAR SI ES VISITA GUIADA
+        $is_visita = isset($this->reserva_data['is_visita']) && $this->reserva_data['is_visita'] === true;
+
         // ✅ TABLA DE PRODUCTOS Y PRECIOS (SOLO SI NO ES AGENCIA)
         if (!$hide_prices) {
             $pdf->SetFont('helvetica', 'B', 9);
@@ -355,10 +358,19 @@ class ReservasPDFGenerator
             $y_current = $pdf->GetY() + 5;
         }
 
-        // TÍTULO DEL PRODUCTO
+        // ✅ TÍTULO DEL PRODUCTO - CAMBIAR SEGÚN TIPO
         $pdf->SetFont('helvetica', 'B', 12);
         $pdf->SetXY(15, $y_current);
-        $pdf->Cell(0, 6, 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)', 0, 1, 'L');
+
+        if ($is_visita) {
+            // Para visitas guiadas
+            $producto_titulo = 'Visita Guiada Medina Azahara (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)';
+        } else {
+            // Para autobús
+            $producto_titulo = 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)';
+        }
+
+        $pdf->Cell(0, 6, $producto_titulo, 0, 1, 'L');
 
         $y_current = $pdf->GetY() + 3;
 
@@ -383,11 +395,14 @@ class ReservasPDFGenerator
         $pdf->SetFont('helvetica', '', 9);
         $pdf->Cell(40, 5, substr($this->reserva_data['hora'], 0, 5) . ' hrs', 0, 1, 'L');
 
-        $pdf->SetFont('helvetica', 'B', 9);
-        $pdf->SetX(15);
-        $pdf->Cell(30, 5, 'Hora de Vuelta:', 0, 0, 'L');
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(40, 5, substr($this->reserva_data['hora_vuelta'] ?? '', 0, 5) . ' hrs', 0, 1, 'L');
+        // ✅ HORA DE VUELTA - SOLO PARA AUTOBÚS
+        if (!$is_visita) {
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetX(15);
+            $pdf->Cell(30, 5, 'Hora de Vuelta:', 0, 0, 'L');
+            $pdf->SetFont('helvetica', '', 9);
+            $pdf->Cell(40, 5, substr($this->reserva_data['hora_vuelta'] ?? '', 0, 5) . ' hrs', 0, 1, 'L');
+        }
 
         $pdf->SetFont('helvetica', 'B', 9);
         $pdf->SetX(15);
@@ -399,7 +414,13 @@ class ReservasPDFGenerator
         $pdf->SetX(15);
         $pdf->Cell(30, 5, 'Producto:', 0, 0, 'L');
         $pdf->SetFont('helvetica', '', 9);
-        $pdf->MultiCell(80, 5, 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)', 0, 'L');
+
+        // ✅ PRODUCTO - CAMBIAR SEGÚN TIPO
+        if ($is_visita) {
+            $pdf->MultiCell(80, 5, 'Visita Guiada Medina Azahara (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)', 0, 'L');
+        } else {
+            $pdf->MultiCell(80, 5, 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)', 0, 'L');
+        }
 
         $y_current = $pdf->GetY() + 3;
 
@@ -412,40 +433,82 @@ class ReservasPDFGenerator
 
         $y_current = $pdf->GetY() + 5;
 
-        // PUNTO DE ENCUENTRO
-        $pdf->SetFont('helvetica', 'B', 9);
-        $pdf->SetXY(15, $y_current);
-        $pdf->Cell(35, 5, 'Punto de Encuentro:', 0, 1, 'L');
+        // ✅ PUNTO DE ENCUENTRO - SOLO PARA AUTOBÚS
+        if (!$is_visita) {
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetXY(15, $y_current);
+            $pdf->Cell(35, 5, 'Punto de Encuentro:', 0, 1, 'L');
 
-        $pdf->SetFont('helvetica', '', 8);
-        $pdf->SetX(15);
-        $pdf->Cell(0, 4, '1-Paseo de la Victoria (glorieta Hospital Cruz Roja)', 0, 1, 'L');
-        $pdf->SetX(15);
-        $pdf->Cell(0, 4, '2-Paseo de la Victoria (frente Mercado Victoria)', 0, 1, 'L');
+            $pdf->SetFont('helvetica', '', 8);
+            $pdf->SetX(15);
+            $pdf->Cell(0, 4, '1-Paseo de la Victoria (glorieta Hospital Cruz Roja)', 0, 1, 'L');
+            $pdf->SetX(15);
+            $pdf->Cell(0, 4, '2-Paseo de la Victoria (frente Mercado Victoria)', 0, 1, 'L');
 
-        $y_current = $pdf->GetY() + 3;
+            $y_current = $pdf->GetY() + 3;
+        }
 
-        // CLIENTE/AGENTE
-        $pdf->SetFont('helvetica', 'B', 9);
-        $pdf->SetXY(15, $y_current);
-        $pdf->Cell(25, 5, 'Cliente/Agente:', 0, 0, 'L');
-        $pdf->SetFont('helvetica', '', 8);
-        $pdf->Cell(0, 5, 'TAQUILLA BRAVO BUS - FRANCISCO BRAVO', 0, 1, 'L');
+        // ✅ CLIENTE/AGENTE - SOLO PARA AUTOBÚS
+        if (!$is_visita) {
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetXY(15, $y_current);
+            $pdf->Cell(25, 5, 'Cliente/Agente:', 0, 0, 'L');
+            $pdf->SetFont('helvetica', '', 8);
+            $pdf->Cell(0, 5, 'TAQUILLA BRAVO BUS - FRANCISCO BRAVO', 0, 1, 'L');
 
-        $y_current = $pdf->GetY() + 3;
+            $y_current = $pdf->GetY() + 3;
+        }
 
-        // ORGANIZA
+        // ✅ ORGANIZA - CAMBIAR SEGÚN TIPO
         $pdf->SetFont('helvetica', 'B', 9);
         $pdf->SetXY(15, $y_current);
         $pdf->Cell(20, 5, 'Organiza:', 0, 1, 'L');
 
-        $pdf->SetFont('helvetica', 'B', 9);
-        $pdf->SetX(15);
-        $pdf->Cell(0, 4, 'AUTOCARES BRAVO PALACIOS,S.L.', 0, 1, 'L');
+        if ($is_visita) {
+            // ✅ PARA VISITAS: MOSTRAR DATOS FISCALES DE LA AGENCIA
+            $agency_name = $this->reserva_data['agency_name'] ?? 'Agencia Colaboradora';
+            $agency_razon_social = $this->reserva_data['agency_razon_social'] ?? '';
+            $agency_cif = $this->reserva_data['agency_cif'] ?? '';
+            $agency_domicilio = $this->reserva_data['agency_domicilio_fiscal'] ?? '';
+            $agency_phone = $this->reserva_data['agency_phone'] ?? '';
 
-        $pdf->SetFont('helvetica', '', 7);
-        $pdf->SetX(15);
-        $pdf->Cell(0, 4, 'INGENIERO BARBUDO, S/N - CORDOBA - CIF: B14485817 - Teléfono: 957429034', 0, 1, 'L');
+            // Nombre de la agencia (usar razón social si está disponible, si no el nombre comercial)
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetX(15);
+            $nombre_mostrar = !empty($agency_razon_social) ? strtoupper($agency_razon_social) : strtoupper($agency_name);
+            $pdf->Cell(0, 4, $nombre_mostrar, 0, 1, 'L');
+
+            // Información fiscal en una línea
+            $pdf->SetFont('helvetica', '', 7);
+            $pdf->SetX(15);
+
+            $info_fiscal = array();
+            if (!empty($agency_domicilio)) {
+                $info_fiscal[] = $agency_domicilio;
+            }
+            if (!empty($agency_cif)) {
+                $info_fiscal[] = 'CIF: ' . $agency_cif;
+            }
+            if (!empty($agency_phone)) {
+                $info_fiscal[] = 'Teléfono: ' . $agency_phone;
+            }
+
+            if (!empty($info_fiscal)) {
+                $pdf->Cell(0, 4, implode(' - ', $info_fiscal), 0, 1, 'L');
+            } else {
+                // Si no hay datos fiscales, mostrar al menos el nombre
+                $pdf->Cell(0, 4, 'Agencia colaboradora de Medina Azahara', 0, 1, 'L');
+            }
+        } else {
+            // PARA AUTOBÚS: MOSTRAR DATOS DE AUTOCARES BRAVO
+            $pdf->SetFont('helvetica', 'B', 9);
+            $pdf->SetX(15);
+            $pdf->Cell(0, 4, 'AUTOCARES BRAVO PALACIOS,S.L.', 0, 1, 'L');
+
+            $pdf->SetFont('helvetica', '', 7);
+            $pdf->SetX(15);
+            $pdf->Cell(0, 4, 'INGENIERO BARBUDO, S/N - CORDOBA - CIF: B14485817 - Teléfono: 957429034', 0, 1, 'L');
+        }
     }
 
     /**
@@ -454,6 +517,9 @@ class ReservasPDFGenerator
     private function generate_stub_section($pdf, $hide_prices = false)
     {
         $y_start = 95;
+
+        // ✅ DETECTAR SI ES VISITA GUIADA
+        $is_visita = isset($this->reserva_data['is_visita']) && $this->reserva_data['is_visita'] === true;
 
         // MARCO DEL TALÓN (lado derecho)
         $pdf->Rect(125, $y_start, 70, 55);
@@ -479,7 +545,15 @@ class ReservasPDFGenerator
         $pdf->Cell(25, 4, 'Producto:', 0, 0, 'L');
         $pdf->SetFont('helvetica', '', 7);
         $pdf->SetX(152);
-        $pdf->MultiCell(40, 3, 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' / ' . substr($this->reserva_data['hora_vuelta'] ?? '', 0, 5) . ' hrs)', 0, 'L');
+
+        // ✅ PRODUCTO EN TALÓN - CAMBIAR SEGÚN TIPO
+        if ($is_visita) {
+            // Para visitas: solo hora de inicio
+            $pdf->MultiCell(40, 3, 'Visita Guiada Medina Azahara (' . substr($this->reserva_data['hora'], 0, 5) . ' hrs)', 0, 'L');
+        } else {
+            // Para autobús: hora de ida y vuelta
+            $pdf->MultiCell(40, 3, 'TAQ BUS Madinat Al-Zahra + Lanzadera (' . substr($this->reserva_data['hora'], 0, 5) . ' / ' . substr($this->reserva_data['hora_vuelta'] ?? '', 0, 5) . ' hrs)', 0, 'L');
+        }
 
         $pdf->SetFont('helvetica', 'B', 8);
         $pdf->SetXY(127, $y_start + 30);
@@ -510,10 +584,6 @@ class ReservasPDFGenerator
             $pdf->SetXY(127, $y_start + 48);
             $pdf->Cell(66, 6, 'RESERVA CONFIRMADA', 0, 0, 'C');
         }
-
-        
-
-        
     }
 
     /**
@@ -550,95 +620,95 @@ class ReservasPDFGenerator
     }
 
     private function add_bottom_image($pdf, $y_position)
-{
-    // ✅ DETECTAR SI ES UN BILLETE DE VISITA GUIADA
-    $is_visita = isset($this->reserva_data['is_visita']) && $this->reserva_data['is_visita'] === true;
-    
-    if ($is_visita && !empty($this->reserva_data['agency_logo_url'])) {
-        // ✅ USAR LOGO DE LA AGENCIA PARA VISITAS GUIADAS (TAMAÑO REDUCIDO)
-        $image_url = $this->reserva_data['agency_logo_url'];
-        error_log('📸 Usando logo de agencia para visita: ' . $image_url);
-        $max_width = 80; // ✅ REDUCIDO DE 180 A 80
-        $max_height = 60; // ✅ REDUCIDO PARA MANTENER PROPORCIÓN
-    } else {
-        // ✅ USAR IMAGEN POR DEFECTO PARA BILLETES DE BUS
-        $image_url = 'https://autobusmedinaazahara.com/wp-content/uploads/2025/08/Vector-10-1.png';
-        error_log('📸 Usando imagen por defecto de bus');
-        $max_width = 180;
-        $max_height = 60;
-    }
+    {
+        // ✅ DETECTAR SI ES UN BILLETE DE VISITA GUIADA
+        $is_visita = isset($this->reserva_data['is_visita']) && $this->reserva_data['is_visita'] === true;
 
-    try {
-        // ✅ DESCARGAR IMAGEN DE FORMA SEGURA
-        $image_data = $this->download_image_safely($image_url);
-
-        if ($image_data === false) {
-            error_log('❌ No se pudo descargar la imagen desde: ' . $image_url);
-            return;
+        if ($is_visita && !empty($this->reserva_data['agency_logo_url'])) {
+            // ✅ USAR LOGO DE LA AGENCIA PARA VISITAS GUIADAS (TAMAÑO REDUCIDO)
+            $image_url = $this->reserva_data['agency_logo_url'];
+            error_log('📸 Usando logo de agencia para visita: ' . $image_url);
+            $max_width = 80; // ✅ REDUCIDO DE 180 A 80
+            $max_height = 60; // ✅ REDUCIDO PARA MANTENER PROPORCIÓN
+        } else {
+            // ✅ USAR IMAGEN POR DEFECTO PARA BILLETES DE BUS
+            $image_url = 'https://autobusmedinaazahara.com/wp-content/uploads/2025/08/Vector-10-1.png';
+            error_log('📸 Usando imagen por defecto de bus');
+            $max_width = 180;
+            $max_height = 60;
         }
 
-        // ✅ CREAR ARCHIVO TEMPORAL EN DIRECTORIO SEGURO
-        $temp_dir = $this->create_secure_temp_dir();
-        if (!$temp_dir) {
-            error_log('❌ No se pudo crear directorio temporal para imagen');
-            return;
-        }
+        try {
+            // ✅ DESCARGAR IMAGEN DE FORMA SEGURA
+            $image_data = $this->download_image_safely($image_url);
 
-        $temp_image = $temp_dir . '/footer_image_' . uniqid() . '.png';
+            if ($image_data === false) {
+                error_log('❌ No se pudo descargar la imagen desde: ' . $image_url);
+                return;
+            }
 
-        if (file_put_contents($temp_image, $image_data) === false) {
-            error_log('❌ No se pudo crear archivo temporal para la imagen');
-            return;
-        }
+            // ✅ CREAR ARCHIVO TEMPORAL EN DIRECTORIO SEGURO
+            $temp_dir = $this->create_secure_temp_dir();
+            if (!$temp_dir) {
+                error_log('❌ No se pudo crear directorio temporal para imagen');
+                return;
+            }
 
-        // Obtener dimensiones de la imagen
-        $image_info = @getimagesize($temp_image);
-        if ($image_info === false) {
-            error_log('❌ No se pudieron obtener las dimensiones de la imagen');
+            $temp_image = $temp_dir . '/footer_image_' . uniqid() . '.png';
+
+            if (file_put_contents($temp_image, $image_data) === false) {
+                error_log('❌ No se pudo crear archivo temporal para la imagen');
+                return;
+            }
+
+            // Obtener dimensiones de la imagen
+            $image_info = @getimagesize($temp_image);
+            if ($image_info === false) {
+                error_log('❌ No se pudieron obtener las dimensiones de la imagen');
+                @unlink($temp_image);
+                return;
+            }
+
+            $original_width = $image_info[0];
+            $original_height = $image_info[1];
+
+            // ✅ CALCULAR DIMENSIONES PARA EL PDF CON LÍMITES MÁXIMOS
+            $pdf_width = $max_width;
+            $pdf_height = ($original_height * $pdf_width) / $original_width;
+
+            // Si la altura excede el máximo, recalcular basándose en altura
+            if ($pdf_height > $max_height) {
+                $pdf_height = $max_height;
+                $pdf_width = ($original_width * $pdf_height) / $original_height;
+            }
+
+            // Verificar que no se salga de la página
+            $available_height = 297 - $y_position - 10;
+
+            if ($pdf_height > $available_height) {
+                $pdf_height = $available_height;
+                $pdf_width = ($original_width * $pdf_height) / $original_height;
+            }
+
+            // ✅ CENTRAR LA IMAGEN HORIZONTALMENTE
+            $x_position = 15 + (180 - $pdf_width) / 2;
+
+            // Insertar imagen en el PDF
+            $pdf->Image($temp_image, $x_position, $y_position, $pdf_width, $pdf_height, 'PNG');
+
+            // Limpiar archivo temporal
             @unlink($temp_image);
-            return;
-        }
 
-        $original_width = $image_info[0];
-        $original_height = $image_info[1];
+            error_log('✅ Imagen añadida al PDF correctamente (ancho: ' . $pdf_width . ', alto: ' . $pdf_height . ')');
+        } catch (Exception $e) {
+            error_log('❌ Error añadiendo imagen al PDF: ' . $e->getMessage());
 
-        // ✅ CALCULAR DIMENSIONES PARA EL PDF CON LÍMITES MÁXIMOS
-        $pdf_width = $max_width;
-        $pdf_height = ($original_height * $pdf_width) / $original_width;
-
-        // Si la altura excede el máximo, recalcular basándose en altura
-        if ($pdf_height > $max_height) {
-            $pdf_height = $max_height;
-            $pdf_width = ($original_width * $pdf_height) / $original_height;
-        }
-
-        // Verificar que no se salga de la página
-        $available_height = 297 - $y_position - 10;
-
-        if ($pdf_height > $available_height) {
-            $pdf_height = $available_height;
-            $pdf_width = ($original_width * $pdf_height) / $original_height;
-        }
-
-        // ✅ CENTRAR LA IMAGEN HORIZONTALMENTE
-        $x_position = 15 + (180 - $pdf_width) / 2;
-
-        // Insertar imagen en el PDF
-        $pdf->Image($temp_image, $x_position, $y_position, $pdf_width, $pdf_height, 'PNG');
-
-        // Limpiar archivo temporal
-        @unlink($temp_image);
-
-        error_log('✅ Imagen añadida al PDF correctamente (ancho: ' . $pdf_width . ', alto: ' . $pdf_height . ')');
-    } catch (Exception $e) {
-        error_log('❌ Error añadiendo imagen al PDF: ' . $e->getMessage());
-
-        // Limpiar archivo temporal si existe
-        if (isset($temp_image) && file_exists($temp_image)) {
-            @unlink($temp_image);
+            // Limpiar archivo temporal si existe
+            if (isset($temp_image) && file_exists($temp_image)) {
+                @unlink($temp_image);
+            }
         }
     }
-}
 
     /**
      * ✅ DESCARGAR IMAGEN DE FORMA SEGURA
