@@ -541,6 +541,7 @@ public function get_reservations_report()
                 GROUP BY r.agency_id, a.agency_name
                 ORDER BY total_reservas DESC
                 
+                
             ";
 
             error_log('=== QUERY DE AGENCIAS ===');
