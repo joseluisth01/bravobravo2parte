@@ -511,21 +511,9 @@ class ReservasPDFGenerator
             $pdf->Cell(66, 6, 'RESERVA CONFIRMADA', 0, 0, 'C');
         }
 
-        // INFORMACIÓN DE LA EMPRESA EN EL TALÓN
-        $pdf->SetFont('helvetica', 'B', 7);
-        $pdf->SetXY(127, $y_start + 57);
-        $pdf->Cell(66, 3, 'Organiza:', 0, 1, 'L');
-        $pdf->SetX(127);
-        $pdf->Cell(66, 3, 'AUTOCARES BRAVO PALACIOS,S.L.', 0, 1, 'L');
-        $pdf->SetFont('helvetica', '', 6);
-        $pdf->SetX(127);
-        $pdf->Cell(66, 3, 'INGENIERO BARBUDO, S/N - CORDOBA - CIF: B14485817 - Teléfono: 957429034', 0, 1, 'L');
+        
 
-        $pdf->SetFont('helvetica', '', 7);
-        $pdf->SetXY(127, $y_start + 63);
-        $fecha_formato = date('Ymd', strtotime($this->reserva_data['fecha']));
-        $codigo_completo = $this->reserva_data['localizador'] . $fecha_formato;
-        $pdf->Cell(66, 3, 'Código: ' . $codigo_completo, 0, 1, 'C');
+        
     }
 
     /**
